@@ -1,0 +1,9 @@
+
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+screenshots/
+agent.js
+node_modules/
+package-lock.json
