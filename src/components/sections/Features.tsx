@@ -56,7 +56,7 @@ const features = [
 
 function TimelineWidget() {
   const items = [
-    { time: "10:42:03", event: "GET /api/users - 523ms", color: "bg-orange-400" },
+    { time: "10:42:03", event: "GET /api/users - 523ms", color: "bg-red-400" },
     { time: "10:42:05", event: "POST /api/orders - 45ms", color: "bg-green-500" },
     { time: "10:42:08", event: "GET /api/products - 1.2s", color: "bg-red-500" },
     { time: "10:42:12", event: "Alert triggered: latency spike", color: "bg-red-500" },
@@ -98,13 +98,13 @@ function ScoreWidget() {
   return (
     <div className="rounded-xl border border-white/[0.07] bg-[#111] p-6 shadow-sm min-h-[240px]">
       <p className="text-sm text-zinc-500 mb-4">Anomaly score</p>
-      <div className="text-5xl font-bold text-orange-500 mb-4">
+      <div className="text-5xl font-bold text-red-500 mb-4">
         {score}
         <span className="text-xl">/100</span>
       </div>
       <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
         <motion.div
-          className="h-full bg-orange-500 rounded-full"
+          className="h-full bg-red-500 rounded-full"
           style={{ width: `${score}%` }}
           transition={{ duration: 0.075 }}
         />
@@ -119,7 +119,7 @@ function ScoreWidget() {
             <span className="text-zinc-500 w-20">{l}</span>
             <div className="flex-1 h-1 bg-white/[0.06] rounded-full">
               <div
-                className="h-full bg-orange-500/40 rounded-full"
+                className="h-full bg-red-500/40 rounded-full"
                 style={{ width: `${v}%` }}
               />
             </div>
@@ -154,7 +154,7 @@ function IntegrationsWidget() {
           key={int.name}
           className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-500 ${
             i <= active
-              ? "border-orange-500/20 bg-orange-500/[0.04]"
+              ? "border-red-500/20 bg-red-500/[0.04]"
               : "border-white/[0.07] bg-white/[0.02]"
           }`}
           initial={{ opacity: 0 }}
@@ -179,7 +179,7 @@ function IntegrationsWidget() {
 function ActionsWidget() {
   const actions = [
     { action: "Latency spike detected", contact: "api/users endpoint", priority: "Critical", color: "bg-red-500/20 text-red-400" },
-    { action: "Error rate > 5%", contact: "POST /checkout", priority: "Warning", color: "bg-orange-500/20 text-orange-400" },
+    { action: "Error rate > 5%", contact: "POST /checkout", priority: "Warning", color: "bg-red-500/20 text-red-400" },
     { action: "New deployment detected", contact: "v2.4.1", priority: "Info", color: "bg-blue-500/20 text-blue-400" },
   ];
   const [shown, setShown] = useState(0);
@@ -224,7 +224,7 @@ export function Features() {
     <section className="py-16 sm:py-24 px-4 sm:px-6 bg-[#0a0a0a]">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-24">
-          <span className="inline-block px-3 py-1 rounded-full bg-orange-500/10 text-orange-400 text-xs font-medium uppercase tracking-widest mb-4">
+          <span className="inline-block px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-xs font-medium uppercase tracking-widest mb-4">
             Features
           </span>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-4 text-zinc-100">
@@ -250,8 +250,8 @@ export function Features() {
                 }`}
               >
                 <div className="flex-1 space-y-6">
-                  <div className="w-12 h-12 rounded-xl border border-orange-500/20 bg-orange-500/[0.06] flex items-center justify-center">
-                    <feature.icon className="w-6 h-6 text-orange-400" strokeWidth={1.5} />
+                  <div className="w-12 h-12 rounded-xl border border-red-500/20 bg-red-500/[0.06] flex items-center justify-center">
+                    <feature.icon className="w-6 h-6 text-red-400" strokeWidth={1.5} />
                   </div>
                   <div>
                     <h3 className="text-xl sm:text-2xl font-semibold tracking-tight mb-3 text-zinc-100">
@@ -267,7 +267,7 @@ export function Features() {
                         key={p}
                         className="flex items-center gap-2 text-sm opacity-70 text-zinc-400"
                       >
-                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
                         {p}
                       </li>
                     ))}

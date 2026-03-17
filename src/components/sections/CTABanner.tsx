@@ -32,7 +32,7 @@ export function CTABanner() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
-          className="h-10 px-6 rounded-md bg-orange-500 hover:bg-orange-400 text-white text-sm font-medium transition-colors shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+          className="h-10 px-6 rounded-md bg-red-500 hover:bg-red-400 text-white text-sm font-medium transition-colors shadow-[0_0_20px_rgba(249,115,22,0.3)]"
         >
           Get started for free
         </motion.button>

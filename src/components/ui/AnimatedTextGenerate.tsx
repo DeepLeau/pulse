@@ -44,7 +44,7 @@ export function AnimatedTextGenerate({
     <div className={cn("font-semibold", className)}>
       <div
         className={cn(
-          "flex flex-wrap items-center gap-x-2 gap-y-1",
+          "flex flex-wrap items-center justify-center gap-x-2 gap-y-1",
           "text-5xl sm:text-6xl tracking-[-0.03em] leading-[1.08]",
           textClassName
         )}

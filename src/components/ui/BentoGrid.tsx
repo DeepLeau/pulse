@@ -113,7 +113,7 @@ const MetricsFeature = ({
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, value)}%` }}
             transition={{ duration: 1.2, ease: "easeOut", delay: 0.1 * i }}
-            className="h-full rounded-full bg-orange-500"
+            className="h-full rounded-full bg-red-500"
           />
         </div>
       </motion.div>
@@ -137,7 +137,7 @@ const TimelineFeature = ({
         className="flex gap-3 mb-3 relative"
       >
         <div className="z-10 mt-0.5 w-5 h-5 rounded-full border border-white/20 bg-[#111] shrink-0 flex items-center justify-center">
-          <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+          <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
         </div>
         <div>
           <p className="text-xs font-medium text-zinc-300">{time}</p>

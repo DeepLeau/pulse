@@ -79,7 +79,7 @@ export function Testimonials() {
         transition={{ duration: 0.5 }}
         className="text-center mb-16 px-6"
       >
-        <span className="inline-block px-4 py-1.5 rounded-full bg-orange-500/10 text-orange-400 text-sm font-medium mb-4">
+        <span className="inline-block px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 text-sm font-medium mb-4">
           Testimonials
         </span>
         <h2 className="text-3xl sm:text-4xl font-semibold text-zinc-100 tracking-tight">

@@ -21,17 +21,19 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] text-xs text-zinc-400"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] text-xs text-white-400"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
           Now in public beta
         </motion.div>
         
-        <AnimatedTextGenerate
-          text="Know instantly when your APIs fail."
-          speed={0.4}
-          mode="dark"
-        />
+        <div className="text-center w-full">
+          <AnimatedTextGenerate
+            text="Know instantly when your APIs fail."
+            speed={0.4}
+            mode="dark"
+          />
+        </div>
         
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -49,7 +51,7 @@ export function Hero() {
           transition={{ duration: 0.5, delay: 0.5 }}
           className="flex items-center gap-3 mt-2"
         >
-          <button className="h-9 px-5 rounded-md bg-orange-500 hover:bg-orange-400 text-white text-sm font-medium transition-colors shadow-[0_0_16px_rgba(249,115,22,0.25)]">
+          <button className="h-9 px-5 rounded-md bg-red-500 hover:bg-red-400 text-white text-sm font-medium transition-colors shadow-[0_0_16px_rgba(249,115,22,0.25)]">
             Get started free
           </button>
           <button className="h-9 px-5 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 text-sm font-medium transition-colors">
@@ -61,7 +63,7 @@ export function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.7 }}
-          className="text-xs text-zinc-600"
+          className="text-xs text-white-600"
         >
           Trusted by 1,200+ SREs · No credit card required
         </motion.p>

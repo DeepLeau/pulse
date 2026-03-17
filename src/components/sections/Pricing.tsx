@@ -65,13 +65,13 @@ export function Pricing() {
               className={cn(
                 "relative rounded-xl p-6 border flex flex-col gap-5",
                 plan.highlight
-                  ? "bg-[#111] border-orange-500/40 shadow-[0_0_32px_rgba(249,115,22,0.08)]"
+                  ? "bg-[#111] border-red-500/40 shadow-[0_0_32px_rgba(249,115,22,0.08)]"
                   : "bg-[#0d0d0d] border-white/[0.07]"
               )}
             >
               {plan.highlight && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-0.5 rounded-full bg-orange-500 text-white text-[11px] font-medium">
+                  <span className="px-3 py-0.5 rounded-full bg-red-500 text-white text-[11px] font-medium">
                     Most popular
                   </span>
                 </div>
@@ -92,7 +92,7 @@ export function Pricing() {
                 className={cn(
                   "h-9 rounded-md text-sm font-medium transition-colors",
                   plan.highlight
-                    ? "bg-orange-500 hover:bg-orange-400 text-white"
+                    ? "bg-red-500 hover:bg-red-400 text-white"
                     : "border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
                 )}
               >
