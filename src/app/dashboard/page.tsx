@@ -1,6 +1,10 @@
-import { dashboardMetrics, recentIncidents, monitoredEndpoints, statusColors } from '@/lib/data';
+"use client";
+
+import { useState } from "react";
+import { dashboardMetrics, recentIncidents, monitoredEndpoints, statusColors, type EndpointFormData } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Minus, ArrowUpRight, Activity, Globe, Zap } from 'lucide-react';
+import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
 
 function StatCard({ label, value, delta, trend }: { label: string; value: string; delta: string; trend: 'up' | 'down' | 'neutral' }) {
   return (
@@ -88,8 +92,14 @@ function EndpointRow({ endpoint }: { endpoint: typeof monitoredEndpoints[0] }) {
 }
 
 export default function DashboardPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const healthyCount = monitoredEndpoints.filter(e => e.status === 'healthy').length;
   const totalEndpoints = monitoredEndpoints.length;
+
+  const handleCreateEndpoint = async (data: EndpointFormData) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    console.log('Endpoint created:', data);
+  };
 
   return (
     <>
@@ -104,7 +114,10 @@ export default function DashboardPage() {
             <Zap size={13} />
             Real-time
           </button>
-          <button className="h-7 px-3 rounded-md bg-red-500 hover:bg-red-400 text-white text-xs font-medium transition-colors shadow-[0_0_12px_rgba(239,68,68,0.3)]">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="h-7 px-3 rounded-md bg-red-500 hover:bg-red-400 text-white text-xs font-medium transition-colors shadow-[0_0_12px_rgba(239,68,68,0.3)]"
+          >
             + New endpoint
           </button>
         </div>
@@ -216,6 +229,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Create Endpoint Modal */}
+      <CreateEndpointModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateEndpoint}
+      />
     </>
   );
 }

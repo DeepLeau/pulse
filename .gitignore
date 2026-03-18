@@ -7,3 +7,6 @@ screenshots/
 agent.js
 node_modules/
 package-lock.json
+
+.next/
+playwright-screenshots.js

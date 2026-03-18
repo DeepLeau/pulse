@@ -27,6 +27,14 @@ export interface Metric {
   trend: 'up' | 'down' | 'neutral';
 }
 
+export interface EndpointFormData {
+  name: string;
+  url: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  interval: '30s' | '60s' | '5m' | '15m';
+  timeout: '5s' | '10s' | '30s';
+}
+
 export const dashboardMetrics: Metric[] = [
   { label: 'Total API calls', value: '1.2M', delta: '+12.4%', trend: 'up' },
   { label: 'Avg response time', value: '142ms', delta: '-8.2%', trend: 'down' },
