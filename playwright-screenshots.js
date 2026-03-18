@@ -1,72 +1,105 @@
 const { chromium } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
 
 (async () => {
-  console.log('Starting screenshot capture script...');
+  console.log('🚀 Starting screenshot script...');
+
+  // Configuration
+  const BASE_URL = 'http://localhost:3000';
+  const SCREENSHOTS_DIR = './screenshots';
   
-  const browser = await chromium.launch({ headless: true });
+  // Assurer que le dossier screenshots existe
+  if (!fs.existsSync(SCREENSHOTS_DIR)) {
+    fs.mkdirSync(SCREENSHOTS_DIR);
+  }
+
+  // Lancement du navigateur
+  const browser = await chromium.launch({ 
+    headless: true 
+  });
+  
   const context = await browser.newContext({
     viewport: { width: 1280, height: 800 }
   });
-  const page = await context.newPage();
   
-  // Base URL assumption for local dev
-  const baseURL = 'http://localhost:3000';
+  const page = await context.newPage();
 
-  try {
-    // --- Screenshot 1: Landing Page ---
-    console.log('Capturing Screenshot 1: Landing Page...');
-    await page.goto(baseURL + '/', { waitUntil: 'domcontentloaded' });
-    
-    // Wait for the CTA button to be visible (critical milestone)
-    const ctaButton = page.getByRole('button', { name: 'Get Started Free' });
-    await expect(ctaButton).toBeVisible({ timeout: 10000 });
-    
-    await page.screenshot({ path: 'screenshots/screenshot-1-landing.png', fullPage: false });
-    console.log('Screenshot 1 saved.');
+  // Fonction utilitaire pour capturer une page de manière déterministe
+  async function capturePage(name, route, waitAction) {
+    const filePath = path.join(SCREENSHOTS_DIR, `${name}.png`);
+    try {
+      console.log(`📸 [${name}] Navigation vers ${route}...`);
+      
+      // Navigation initiale
+      // On utilise domcontentloaded car on attendra l'élément spécifique ensuite
+      // Cela rend le test plus rapide et robuste que networkidle qui peut attendre les scripts analytiques
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
 
-  } catch (error) {
-    console.error('Error capturing Screenshot 1:', error.message);
-    // Capture error state if possible
-    await page.screenshot({ path: 'screenshots/screenshot-1-error.png', fullPage: false });
+      // Action d'attente spécifique (jalon stable)
+      console.log(`📸 [${name}] Attente de l'état stable...`);
+      await waitAction(page);
+
+      // Capture
+      await page.screenshot({ path: filePath, fullPage: false });
+      console.log(`✅ [${name}] Capture sauvegardée : ${filePath}`);
+
+    } catch (error) {
+      console.error(`❌ [${name}] Échec de la capture : ${error.message}`);
+      // Capture d'écran d'erreur pour le debug si besoin (optionnel mais bonne pratique)
+      try {
+        await page.screenshot({ path: path.join(SCREENSHOTS_DIR, `error-${name}.png`), fullPage: false });
+      } catch (screenshotErr) {
+        console.error(`Échec de la capture d'erreur : ${screenshotErr.message}`);
+      }
+    }
   }
 
-  try {
-    // --- Screenshot 2: Dashboard Grid (Premium) ---
-    console.log('Capturing Screenshot 2: Dashboard Grid...');
-    await page.goto(baseURL + '/dashboard', { waitUntil: 'domcontentloaded' });
+  // --- Scénario 1 : Page d'accueil ---
+  await capturePage('screenshot-1', 
+    `${BASE_URL}/`, 
+    async (p) => {
+      // Attendre le bouton CTA avec le texte exact corrigé
+      const ctaButton = p.getByText('Get started for free', { exact: true });
+      await ctaButton.waitFor({ state: 'visible' });
+      // Validation supplémentaire implicite : le bouton est cliquable (visible)
+      console.log('   -> Bouton CTA "Get started for free" détecté et visible.');
+    }
+  );
 
-    // Wait for dashboard grid OR glow card (deterministic milestone)
-    // Using first() in case multiple elements match, or specific selector
-    const dashboardGrid = page.locator('[data-testid="dashboard-grid"]').first();
-    const glowCard = page.locator('.glow-card').first();
-    
-    // Wait for at least one of the elements to be visible
-    await expect(dashboardGrid.or(glowCard)).toBeVisible({ timeout: 10000 });
-    
-    await page.screenshot({ path: 'screenshots/screenshot-2-dashboard-grid.png', fullPage: false });
-    console.log('Screenshot 2 saved.');
+  // --- Scénario 2 : Dashboard Endpoints ---
+  await capturePage('screenshot-2',
+    `${BASE_URL}/dashboard/endpoints`,
+    async (p) => {
+      // Attendre le header de la nouvelle page
+      const header = p.locator('.page-header').first();
+      await header.waitFor({ state: 'visible' });
+      console.log('   -> Header de la page Endpoints détecté.');
+    }
+  );
 
-  } catch (error) {
-    console.error('Error capturing Screenshot 2:', error.message);
-    await page.screenshot({ path: 'screenshots/screenshot-2-error.png', fullPage: false });
-  }
+  // --- Scénario 3 : Dashboard Analytics ---
+  await capturePage('screenshot-3',
+    `${BASE_URL}/dashboard/analytics`,
+    async (p) => {
+      // Attendre le header de la nouvelle page
+      const header = p.locator('.page-header').first();
+      await header.waitFor({ state: 'visible' });
+      console.log('   -> Header de la page Analytics détecté.');
+    }
+  );
 
-  try {
-    // --- Screenshot 3: API Status Table ---
-    console.log('Capturing Screenshot 3: API Status Table...');
-    // We are already on /dashboard, just wait for the specific table
-    
-    const apiTable = page.locator('[data-testid="api-status-table"]');
-    await expect(apiTable).toBeVisible({ timeout: 10000 });
-    
-    await page.screenshot({ path: 'screenshots/screenshot-3-api-status.png', fullPage: false });
-    console.log('Screenshot 3 saved.');
-
-  } catch (error) {
-    console.error('Error capturing Screenshot 3:', error.message);
-    await page.screenshot({ path: 'screenshots/screenshot-3-error.png', fullPage: false });
-  }
+  // --- Scénario 4 : Dashboard Settings ---
+  await capturePage('screenshot-4',
+    `${BASE_URL}/dashboard/settings`,
+    async (p) => {
+      // Attendre le header de la nouvelle page
+      const header = p.locator('.page-header').first();
+      await header.waitFor({ state: 'visible' });
+      console.log('   -> Header de la page Settings détecté.');
+    }
+  );
 
   await browser.close();
-  console.log('Script finished.');
+  console.log('🏁 Script terminé.');
 })();
