@@ -51,12 +51,12 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
-          className="flex items-center gap-3 mt-2"
+          className="flex items-center gap-3 mt-2 text-center"
         >
-          <Link href="/dashboard" className="h-9 px-5 rounded-md bg-red-500 hover:bg-red-400 text-white text-sm font-medium transition-colors shadow-[0_0_16px_rgba(239,68,68,0.25)]">
-            Get started free
+          <Link href="/dashboard" className="h-9 px-5 rounded-md bg-red-500 hover:bg-red-400 text-white text-sm font-medium transition-colors shadow-[0_0_16px_rgba(239,68,68,0.25)] inline-flex items-center justify-center">
+            get started for free
           </Link>
-          <button className="h-9 px-5 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 text-sm font-medium transition-colors">
+          <button className="h-9 px-5 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 text-sm font-medium transition-colors inline-flex items-center justify-center">
             View docs →
           </button>
         </motion.div>
