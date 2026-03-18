@@ -1,52 +1,83 @@
-const { chromium } = require('playwright');
-const { expect } = require('@playwright/test');
-const fs = require('fs');
+const { chromium } = require('@playwright/test');
 const path = require('path');
+const fs = require('fs');
 
-(async () => {
-  // Configuration et préparation du répertoire de captures
-  const screenshotDir = path.join(process.cwd(), 'screenshots');
-  if (!fs.existsSync(screenshotDir)) {
-    fs.mkdirSync(screenshotDir, { recursive: true });
+async function takeScreenshots() {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 800 }
+  });
+  const page = await context.newPage();
+
+  // Ensure screenshots directory exists
+  const screenshotsDir = path.join(process.cwd(), 'screenshots');
+  if (!fs.existsSync(screenshotsDir)) {
+    fs.mkdirSync(screenshotsDir, { recursive: true });
   }
 
-  const browser = await chromium.launch();
-  // Configuration du viewport selon les spécifications (1280x800)
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  console.log('Starting screenshot capture script...\n');
 
   try {
-    // --- Screenshot 1 ---
-    console.log('Initialisation : Navigation vers la page d\'accueil et validation du Hero.');
+    // ============================================
+    // SCREENSHOT 1: Dashboard initial state
+    // ============================================
+    console.log('[1/2] Navigating to /dashboard...');
+    await page.goto('http://localhost:3000/dashboard', { 
+      waitUntil: 'networkidle',
+      timeout: 15000 
+    });
+
+    // Wait for page to be stable - wait for New endpoint button to be visible
+    const newEndpointButton = page.getByRole('button', { name: /new endpoint/i });
+    await newEndpointButton.waitFor({ state: 'visible', timeout: 10000 });
     
-    // 1. Navigation
-    await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
-
-    // 2. Wait for the hero section to be visible (Milestone UI)
-    // On cible la première section qui correspond généralement au Hero dans une的结构
-    const heroSection = page.locator('section').first();
-    await heroSection.waitFor({ state: 'visible', timeout: 10000 });
-
-    // 3. Localisation du bouton CTA
-    // Utilisation de getByRole pour la robustesse (accessibilité)
-    const ctaButton = page.getByRole('link', { name: 'get started for free' })
-                          .or(page.getByRole('button', { name: 'get started for free' }));
-
-    // 4. Attente dynamique du bouton
-    await ctaButton.waitFor({ state: 'visible' });
-
-    // 5. Validation : Le bouton CTA affiche le texte corrigé
-    await expect(ctaButton).toHaveText(/get started for free/i);
-
-    // 6. Validation : Le bouton est correctement aligné (Vérification de stabilité + Capture)
-    // L'assertion de alignement visuel se fait via la capture d'écran, mais on s'assure ici 
-    // que l'élément est présent et interactif (état stable).
+    // Additional stabilization - ensure button is actionable
+    await page.waitForLoadState('domcontentloaded');
     
-    console.log('Capture : screenshot-1.png');
-    await page.screenshot({ path: 'screenshots/screenshot-1.png', fullPage: false });
+    console.log('[1/2] Dashboard loaded, New endpoint button visible.');
+    await page.screenshot({ 
+      path: path.join(screenshotsDir, 'screenshot-1-dashboard-initial.png'),
+      fullPage: false
+    });
+    console.log('[1/2] Screenshot saved: screenshot-1-dashboard-initial.png\n');
 
   } catch (error) {
-    console.error('Erreur lors de l\'exécution du script :', error);
-  } finally {
-    await browser.close();
+    console.error('[1/2] Failed to capture dashboard screenshot:', error.message);
+    // Continue to next screenshot even if this one fails
   }
-})();
+
+  try {
+    // ============================================
+    // SCREENSHOT 2: Modal opened after clicking
+    // ============================================
+    console.log('[2/2] Clicking New endpoint button...');
+    const newEndpointButton = page.getByRole('button', { name: /new endpoint/i });
+    await newEndpointButton.click();
+    
+    // Wait for modal to be visible - use dialog role for resilience
+    const modal = page.getByRole('dialog');
+    await modal.waitFor({ state: 'visible', timeout: 10000 });
+    
+    // Additional stabilization for modal content
+    await page.waitForLoadState('domcontentloaded');
+    
+    console.log('[2/2] Modal opened successfully.');
+    await page.screenshot({ 
+      path: path.join(screenshotsDir, 'screenshot-2-modal-opened.png'),
+      fullPage: false
+    });
+    console.log('[2/2] Screenshot saved: screenshot-2-modal-opened.png\n');
+
+  } catch (error) {
+    console.error('[2/2] Failed to capture modal screenshot:', error.message);
+  }
+
+  await browser.close();
+  console.log('Screenshot capture complete.');
+  console.log(`Output directory: ${screenshotsDir}`);
+}
+
+takeScreenshots().catch((error) => {
+  console.error('Fatal error in screenshot script:', error);
+  process.exit(1);
+});
