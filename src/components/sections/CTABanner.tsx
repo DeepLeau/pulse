@@ -35,7 +35,7 @@ export function CTABanner() {
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
         >
-          <Link href="/dashboard" className="h-10 px-6 rounded-md bg-red-500 hover:bg-red-400 text-white text-sm font-medium transition-colors shadow-[0_0_20px_rgba(239,68,68,0.3)] inline-flex items-center">
+          <Link href="/dashboard" className="h-10 px-6 rounded-md bg-red-500 hover:bg-red-400 text-white text-sm font-medium transition-colors shadow-[0_0_20px_rgba(239,68,68,0.3)] inline-flex items-center justify-center">
             Get started for free
           </Link>
         </motion.div>
