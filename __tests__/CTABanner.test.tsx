@@ -33,7 +33,7 @@ describe("CTABanner", () => {
     jest.clearAllMocks();
   });
 
-  it("should render CTA banner with headline and button", () => {
+  it("should render CTA banner with headline and link", () => {
     // Arrange
     // Act
     render(<CTABanner />);
@@ -43,7 +43,7 @@ describe("CTABanner", () => {
       screen.getByRole("heading", { name: /start monitoring today/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /get started for free/i })
+      screen.getByRole("link", { name: /get started for free/i })
     ).toBeInTheDocument();
   });
 
