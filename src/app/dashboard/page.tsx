@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { dashboardMetrics, recentIncidents, monitoredEndpoints, statusColors, type EndpointFormData, useEndpointsStore } from '@/lib/data';
+import { dashboardMetrics, recentIncidents, monitoredEndpoints, statusColors, type EndpointFormData } from '@/lib/data';
+import { useEndpoints } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Minus, ArrowUpRight, Activity, Globe, Zap } from 'lucide-react';
 import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
@@ -93,9 +94,9 @@ function EndpointRow({ endpoint }: { endpoint: typeof monitoredEndpoints[0] }) {
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { addEndpoint } = useEndpointsStore();
-  const healthyCount = monitoredEndpoints.filter(e => e.status === 'healthy').length;
-  const totalEndpoints = monitoredEndpoints.length;
+  const { endpoints, addEndpoint } = useEndpoints();
+  const healthyCount = endpoints.filter(e => e.status === 'healthy').length;
+  const totalEndpoints = endpoints.length;
 
   const handleCreateEndpoint = async (data: EndpointFormData) => {
     await new Promise((resolve) => setTimeout(resolve, 800));
@@ -222,7 +223,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {monitoredEndpoints.map((endpoint) => (
+                {endpoints.slice(0, 6).map((endpoint) => (
                   <EndpointRow key={endpoint.id} endpoint={endpoint} />
                 ))}
               </tbody>

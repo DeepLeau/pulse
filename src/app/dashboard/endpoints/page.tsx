@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { statusColors, type EndpointFormData, useEndpointsStore, filterEndpoints, type Endpoint } from '@/lib/data';
+import { statusColors, type EndpointFormData, filterEndpoints, type Endpoint } from '@/lib/data';
+import { useEndpoints } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Globe, Search, Filter, Plus, ArrowUpRight, MoreHorizontal, Trash2, Edit, RefreshCw } from 'lucide-react';
 import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
@@ -78,7 +79,7 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
 export default function EndpointsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { endpoints, addEndpoint } = useEndpointsStore();
+  const { endpoints, addEndpoint } = useEndpoints();
 
   const filteredEndpoints = useMemo(
     () => filterEndpoints(searchQuery, endpoints),
@@ -163,7 +164,7 @@ export default function EndpointsPage() {
                   <tr className="border-b border-white/[0.05]">
                     <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Name</th>
                     <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">URL</th>
-                    <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc.500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Latency</th>
                     <th className="px-4 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Uptime</th>
                     <th className="px-4 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Last Check</th>

@@ -4,9 +4,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DashboardPage from '@/app/dashboard/page';
-import { useEndpointsStore } from '@/lib/data';
-import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
-import * as dataModule from '@/lib/data';
+import { EndpointsProvider } from '@/lib/store';
 
 // Mock framer-motion
 jest.mock('framer-motion', () => ({
@@ -26,24 +24,26 @@ jest.mock('next/navigation', () => ({
 describe('DashboardPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset the store instance to ensure clean state
-    (dataModule as any).storeInstance = null;
   });
 
   it('should open modal when clicking "Add endpoint" button', async () => {
     const user = userEvent.setup();
 
     // Arrange
-    render(<DashboardPage />);
+    render(
+      <EndpointsProvider>
+        <DashboardPage />
+      </EndpointsProvider>
+    );
 
     // Act
     const addButton = screen.getByRole('button', { name: /add endpoint/i });
     await user.click(addButton);
 
-    // Assert - modal should be visible
+    // Assert - modal should be visible (use role="dialog" for robust assertion)
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByText(/create endpoint/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /create endpoint/i })).toBeInTheDocument();
     });
   });
 
@@ -51,7 +51,11 @@ describe('DashboardPage', () => {
     const user = userEvent.setup();
 
     // Arrange
-    render(<DashboardPage />);
+    render(
+      <EndpointsProvider>
+        <DashboardPage />
+      </EndpointsProvider>
+    );
 
     // Act - open modal
     const addButton = screen.getByRole('button', { name: /add endpoint/i });
