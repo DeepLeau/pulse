@@ -1,9 +1,10 @@
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { CreateEndpointModal } from "@/components/ui/CreateEndpointModal";
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
+import type { EndpointFormData } from '@/components/ui/CreateEndpointModal';
 
-jest.mock("framer-motion", () => ({
+// Mock framer-motion to avoid IntersectionObserver errors
+jest.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
       <div {...props}>{children}</div>
@@ -12,66 +13,113 @@ jest.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-describe("CreateEndpointModal", () => {
-  const defaultProps = {
-    isOpen: true,
-    onClose: jest.fn(),
-    onSubmit: jest.fn().mockResolvedValue(undefined),
-  };
+describe('CreateEndpointModal', () => {
+  const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+  const mockOnClose = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should close modal when Escape key is pressed", async () => {
+  it('should show validation error when submitting empty form', async () => {
     const user = userEvent.setup();
+
     // Arrange
-    render(<CreateEndpointModal {...defaultProps} />);
+    render(
+      <CreateEndpointModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSubmit={mockOnSubmit}
+      />
+    );
 
-    // Act
-    await user.keyboard("{Escape}");
+    // Act - click submit without filling fields
+    const submitButton = screen.getByRole('button', { name: /create endpoint/i });
+    await userEvent.click(submitButton);
 
-    // Assert
-    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+    // Assert - errors should be visible
+    await waitFor(() => {
+      expect(screen.getByText(/name is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/url is required/i)).toBeInTheDocument();
+    });
+
+    // Assert - submit was not called
+    expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
-  it("should show validation errors when submitting empty form", async () => {
+  it('should call onSubmit with form data when valid', async () => {
     const user = userEvent.setup();
-    // Arrange
-    render(<CreateEndpointModal {...defaultProps} />);
-    const submitButton = screen.getByRole("button", { name: /create endpoint/i });
 
-    // Act
+    // Arrange
+    render(
+      <CreateEndpointModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSubmit={mockOnSubmit}
+      />
+    );
+
+    // Act - fill form
+    const nameInput = screen.getByLabelText(/name/i);
+    const urlInput = screen.getByLabelText(/url/i);
+    const submitButton = screen.getByRole('button', { name: /create endpoint/i });
+
+    await user.type(nameInput, 'My API');
+    await user.type(urlInput, 'https://api.example.com/health');
     await user.click(submitButton);
 
-    // Assert
-    expect(await screen.findByText(/name is required/i)).toBeInTheDocument();
-    expect(await screen.findByText(/url is required/i)).toBeInTheDocument();
-    expect(defaultProps.onSubmit).not.toHaveBeenCalled();
+    // Assert - onSubmit called with correct data
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'My API',
+          url: 'https://api.example.com/health',
+          method: 'GET',
+          interval: '60s',
+          timeout: '10s',
+        })
+      );
+    });
   });
 
-  it("should call onSubmit with form data when submission succeeds", async () => {
-    const user = userEvent.setup();
+  it('should close modal when clicking backdrop', async () => {
     // Arrange
-    const onSubmit = jest.fn().mockResolvedValue(undefined);
-    render(<CreateEndpointModal {...defaultProps} onSubmit={onSubmit} />);
+    render(
+      <CreateEndpointModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSubmit={mockOnSubmit}
+      />
+    );
 
-    // Act
-    await user.type(screen.getByLabelText(/name/i), "Production API");
-    await user.type(screen.getByLabelText(/url/i), "https://api.example.com/health");
-    await user.click(screen.getByRole("button", { name: /create endpoint/i }));
+    // Act - click on backdrop (first child of the fixed container)
+    const backdrop = screen.getByRole('dialog').parentElement;
+    if (backdrop) {
+      fireEvent.click(backdrop);
+    }
 
     // Assert
     await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: "Production API",
-          url: "https://api.example.com/health",
-          method: "GET",
-          interval: "60s",
-          timeout: "10s",
-        })
-      );
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+  });
+
+  it('should close modal when pressing Escape', async () => {
+    // Arrange
+    render(
+      <CreateEndpointModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSubmit={mockOnSubmit}
+      />
+    );
+
+    // Act
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    // Assert
+    await waitFor(() => {
+      expect(mockOnClose).toHaveBeenCalled();
     });
   });
 });

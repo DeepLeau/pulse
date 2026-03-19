@@ -1,8 +1,12 @@
-import { endpointsList, statusColors } from '@/lib/data';
+"use client";
+
+import { useState, useMemo } from 'react';
+import { statusColors, type EndpointFormData, useEndpointsStore, filterEndpoints, type Endpoint } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Globe, Search, Filter, Plus, ArrowUpRight, MoreHorizontal, Trash2, Edit, RefreshCw } from 'lucide-react';
+import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
 
-function EndpointRow({ endpoint }: { endpoint: typeof endpointsList[0] }) {
+function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
   const colors = statusColors[endpoint.status];
   return (
     <tr className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer">
@@ -48,24 +52,64 @@ function EndpointRow({ endpoint }: { endpoint: typeof endpointsList[0] }) {
   );
 }
 
+function EmptyState({ hasSearch }: { hasSearch: boolean }) {
+  if (hasSearch) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center mb-4">
+          <Search size={18} className="text-zinc-500" strokeWidth={1.5} />
+        </div>
+        <p className="text-sm font-medium text-zinc-300 mb-1">No endpoints found</p>
+        <p className="text-sm text-zinc-600 max-w-xs">No endpoints match your search. Try a different name or URL.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center mb-4">
+        <Globe size={18} className="text-zinc-500" strokeWidth={1.5} />
+      </div>
+      <p className="text-sm font-medium text-zinc-300 mb-1">No endpoints yet</p>
+      <p className="text-sm text-zinc-600 max-w-xs">Create your first endpoint to start monitoring your services.</p>
+    </div>
+  );
+}
+
 export default function EndpointsPage() {
-  const healthyCount = endpointsList.filter(e => e.status === 'healthy').length;
-  const degradedCount = endpointsList.filter(e => e.status === 'degraded').length;
-  const downCount = endpointsList.filter(e => e.status === 'down').length;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { endpoints, addEndpoint } = useEndpointsStore();
+
+  const filteredEndpoints = useMemo(
+    () => filterEndpoints(searchQuery, endpoints),
+    [searchQuery, endpoints]
+  );
+
+  const healthyCount = endpoints.filter(e => e.status === 'healthy').length;
+  const degradedCount = endpoints.filter(e => e.status === 'degraded').length;
+  const downCount = endpoints.filter(e => e.status === 'down').length;
+
+  const handleCreateEndpoint = async (data: EndpointFormData) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    addEndpoint(data);
+  };
 
   return (
     <>
       <header className="flex items-center justify-between h-14 px-6 border-b border-white/[0.06] shrink-0">
         <div>
           <h1 className="text-sm font-semibold text-zinc-100">Endpoints</h1>
-          <p className="text-xs text-zinc-500">{endpointsList.length} endpoints monitored</p>
+          <p className="text-xs text-zinc-500">{endpoints.length} endpoints monitored</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="h-7 px-3 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-400 text-xs transition-colors flex items-center gap-1.5">
             <RefreshCw size={13} />
             Refresh
           </button>
-          <button className="h-7 px-3 rounded-md bg-red-500 hover:bg-red-400 text-white text-xs font-medium transition-colors shadow-[0_0_12px_rgba(239,68,68,0.3)] flex items-center gap-1.5">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="h-7 px-3 rounded-md bg-red-500 hover:bg-red-400 text-white text-xs font-medium transition-colors shadow-[0_0_12px_rgba(239,68,68,0.3)] flex items-center gap-1.5"
+          >
             <Plus size={13} />
             Add endpoint
           </button>
@@ -73,12 +117,14 @@ export default function EndpointsPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-        {/* Filters */}
+        {/* Search */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
             <input 
-              placeholder="Search endpoints..."
+              placeholder="Search endpoints by name or URL..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-8 pl-9 pr-3 rounded-md bg-[#111] border border-white/[0.08] text-xs text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-red-500/40 transition-colors"
             />
           </div>
@@ -104,30 +150,43 @@ export default function EndpointsPage() {
           </div>
         </div>
 
-        {/* Endpoints Table */}
-        <div className="bg-[#111] border border-white/[0.07] rounded-lg overflow-hidden hover:border-red-500/10 transition-colors">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.05]">
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">URL</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Latency</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Uptime</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Last Check</th>
-                  <th className="px-4 py-3 w-10"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {endpointsList.map((endpoint) => (
-                  <EndpointRow key={endpoint.id} endpoint={endpoint} />
-                ))}
-              </tbody>
-            </table>
+        {/* Endpoints Table or Empty State */}
+        {filteredEndpoints.length === 0 ? (
+          <div className="bg-[#111] border border-white/[0.07] rounded-lg overflow-hidden">
+            <EmptyState hasSearch={searchQuery.length > 0} />
           </div>
-        </div>
+        ) : (
+          <div className="bg-[#111] border border-white/[0.07] rounded-lg overflow-hidden hover:border-red-500/10 transition-colors">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.05]">
+                    <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">URL</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Latency</th>
+                    <th className="px-4 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Uptime</th>
+                    <th className="px-4 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Last Check</th>
+                    <th className="px-4 py-3 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEndpoints.map((endpoint) => (
+                    <EndpointRow key={endpoint.id} endpoint={endpoint} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Create Endpoint Modal */}
+      <CreateEndpointModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleCreateEndpoint}
+      />
     </>
   );
 }
