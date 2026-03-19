@@ -17,14 +17,14 @@ describe("DashboardPage", () => {
     jest.clearAllMocks();
   });
 
-  it("should open create endpoint modal when clicking New endpoint button", async () => {
+  it("should open create endpoint modal when clicking Add endpoint button", async () => {
     const user = userEvent.setup();
     // Arrange
     render(<DashboardPage />);
-    const newEndpointButton = screen.getByRole("button", { name: /\+ new endpoint/i });
+    const addEndpointButton = screen.getByRole("button", { name: /\+ add endpoint/i });
 
     // Act
-    await user.click(newEndpointButton);
+    await user.click(addEndpointButton);
 
     // Assert
     expect(screen.getByRole("dialog")).toBeInTheDocument();
