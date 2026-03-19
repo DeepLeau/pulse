@@ -2,122 +2,110 @@ const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 
-// Configuration
-const BASE_URL = 'http://localhost:3000';
-const SCREENSHOT_DIR = './screenshots';
-
-// Assure que le dossier screenshots existe
-if (!fs.existsSync(SCREENSHOT_DIR)) {
-  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
-}
-
 (async () => {
-  console.log('🚀 Launching browser for screenshots...');
-  
-  const browser = await chromium.launch({ 
-    headless: true 
-  });
-  
-  const context = await browser.newContext({
-    viewport: { width: 1280, height: 800 },
-    // Si l'app utilise une auth basée sur le storage local, on peut le charger ici
-    // storageState: './playwright/.auth/state.json' 
-  });
+  console.log('🚀 Starting screenshot script...');
 
-  const page = await context.newPage();
-
-  // --- Helper pour gérer les captures et erreurs cleanly ---
-  async function capture(stepName, actionFn) {
-    try {
-      console.log(`➡️  Exécution : ${stepName}`);
-      await actionFn();
-    } catch (error) {
-      console.error(`❌ Erreur lors de l'étape "${stepName}" :`, error.message);
-      // On continue malgré l'erreur pour ne pas bloquer les captures suivantes
-    }
+  // Create screenshots directory if it doesn't exist
+  const screenshotsDir = path.join(__dirname, 'screenshots');
+  if (!fs.existsSync(screenshotsDir)) {
+    fs.mkdirSync(screenshotsDir);
   }
 
-  // ============================================================
-  // SCREENSHOT 1 : /dashboard - Vérification du bouton 'Add endpoint'
-  // ============================================================
-  await capture('Screenshot 1: Dashboard - Bouton "Add endpoint"', async () => {
-    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' });
-    
-    // On attend que le bouton soit visible et stable
-    const addButton = page.getByRole('button', { name: 'Add endpoint', exact: true });
-    await addButton.waitFor({ state: 'visible', timeout: 5000 });
-
-    await page.screenshot({ 
-      path: `${SCREENSHOT_DIR}/screenshot-1.png`, 
-      fullPage: false 
-    });
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 800 }
   });
+  
+  const page = await context.newPage();
 
-  // ============================================================
-  // SCREENSHOT 2 : /dashboard - Ouverture de la modale
-  // ============================================================
-  await capture('Screenshot 2: Dashboard - Ouverture modale', async () => {
-    // On s'assure d'être sur le dashboard (redondant si Screenshot 1 a réussi)
-    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' });
+  try {
+    // --- Initial Navigation & Auth Check ---
+    console.log('➡️  Navigating to /dashboard/endpoints...');
+    await page.goto('http://localhost:3000/dashboard/endpoints');
     
-    // Interaction : Cliquer sur le bouton
-    const addButton = page.getByRole('button', { name: 'Add endpoint', exact: true });
+    // Check if redirected to login (Common Next.js behavior)
+    if (page.url().includes('/login')) {
+      console.log('⚠️  Auth required. Capturing login page.');
+      await page.screenshot({ path: 'screenshots/login-required.png', fullPage: false });
+      console.log('✅ Screenshot saved: login-required.png');
+      await browser.close();
+      return;
+    }
+
+    // --- Screenshot 1: Dashboard Load & Button Validation ---
+    // Wait for the 'Add endpoint' button to be visible
+    // Using getByRole ensures we target the interactive element regardless of exact text casing
+    const addButton = page.getByRole('button', { name: /add endpoint/i });
+    await expect(addButton).toBeVisible();
+    
+    console.log('📸 Capturing Screenshot 1: Dashboard Loaded');
+    await page.screenshot({ path: 'screenshots/screenshot-1.png', fullPage: false });
+
+
+    // --- Screenshot 2: Open Modal ---
+    console.log('➡️  Clicking Add endpoint button...');
     await addButton.click();
 
-    // Attente active : La modale (dialog) doit être présente
-    // On utilise 'dialog' role qui est l'attribut ARIA standard pour les modales
-    const modal = page.getByRole('dialog');
-    await modal.waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for the modal to appear. 
+    // We assume the modal has a heading or a dialog role.const modal = page.getByRole('dialog');
+    await expect(modal).toBeVisible();
+    
+    // Optional: Wait for a specific title inside modal to ensure it's fully rendered
+    // (Assuming standard naming like "Create Endpoint" or "New Endpoint")
+    // If the exact text isn't known, waiting for 'dialog' role is sufficient for stability.
 
-    await page.screenshot({ 
-      path: `${SCREENSHOT_DIR}/screenshot-2.png`, 
-      fullPage: false 
-    });
-  });
+    console.log('📸 Capturing Screenshot 2: Modal Opened');
+    await page.screenshot({ path: 'screenshots/screenshot-2.png', fullPage: false });
 
-  // ============================================================
-  // SCREENSHOT 3 : /dashboard/endpoints - Présence barre de recherche
-  // ============================================================
-  await capture('Screenshot 3: Endpoints - Barre de recherche', async () => {
-    await page.goto(`${BASE_URL}/dashboard/endpoints`, { waitUntil: 'networkidle' });
 
-    // On cible l'input de recherche. 
-    // Stratégie : Chercher par placeholder (courant) ou par rôle 'searchbox'
-    const searchInput = page.getByPlaceholder('Search endpoints...');
-    await searchInput.waitFor({ state: 'visible', timeout: 5000 });
+    // --- Screenshot 3: Create Endpoint ---
+    console.log('➡️  Filling form and submitting...');
+    
+    // Use generic labels that likely exist in a form (Name, URL, etc.)
+    // If 'Name' label isn't visible, fallback to placeholder text
+    const nameInput = page.getByLabel(/name/i).or(page.getByPlaceholder(/name/i));
+    const urlInput = page.getByLabel(/url/i).or(page.getByPlaceholder(/url/i));
+    
+    await nameInput.fill('QA Test Endpoint');
+    await urlInput.fill('https://qa-api.example.com/v1');
 
-    await page.screenshot({ 
-      path: `${SCREENSHOT_DIR}/screenshot-3.png`, 
-      fullPage: false 
-    });
-  });
+    // Find submit button inside the modal
+    const submitButton = page.getByRole('button', { name: /save|create/i });
+    await submitButton.click();
 
-  // ============================================================
-  // SCREENSHOT 4 : /dashboard/endpoints - Filtrage
-  // ============================================================
-  await capture('Screenshot 4: Endpoints - Filtrage результат', async () => {
-    // Assure que nous sommes sur la page (reload pour reset l'état si besoin)
-    await page.goto(`${BASE_URL}/dashboard/endpoints`, { waitUntil: 'networkidle' });
+    // Wait for the modal to close OR the new item to appear in the list
+    // Waiting for the new item in the list is a stronger assertion of success
+    const newEndpointRow = page.getByText('QA Test Endpoint');
+    await expect(newEndpointRow).toBeVisible();
 
-    const searchInput = page.getByPlaceholder('Search endpoints...');
-    await searchInput.waitFor({ state: 'visible' });
+    console.log('📸 Capturing Screenshot 3: Endpoint Created');
+    await page.screenshot({ path: 'screenshots/screenshot-3.png', fullPage: false });
 
-    // Action : Remplir avec un terme probable ("api" est souvent présent dans les endpoints)
-    await searchInput.fill('api');
 
-    // Attente : On attend que la liste des résultats change ou que l'input soit rempli.
-    //playwright attend automatiquement que la valeur soit injective dans l'input
-    await expect(searchInput).toHaveValue('api');
+    // --- Screenshot 4: Search & Filter ---
+    console.log('➡️  Testing search filter...');
+    
+    // Locate search input. Common patterns: placeholder 'Search...', 'Filter', etc.const searchInput = page.getByPlaceholder(/search/i).or(page.getByLabel(/search/i));
+    await searchInput.fill('QA Test Endpoint');
 
-    // Petit délai pour laisser le temps au rendu UI de la liste de se mettre à jour (filtering est souvent instantané mais side-effect possible)
-    // On wait un selector qui change : par exemple la liste des items.
-    // Ici, comme on ne sait pas si des résultats existent, on valide juste l'état "Inputfilled"
-    await page.screenshot({ 
-      path: `${SCREENSHOT_DIR}/screenshot-4.png`, 
-      fullPage: false 
-    });
-  });
+    // Wait for the list to reflect the filter
+    // We verify the specific row is still visible and perhaps others are gone (hard to do without specific IDs, 
+    // so we verify our target is present).await expect(newEndpointRow).toBeVisible();
 
-  console.log('✅ Capture sequence completed.');
-  await browser.close();
+    console.log('📸 Capturing Screenshot 4: Search Filter Active');
+    await page.screenshot({ path: 'screenshots/screenshot-4.png', fullPage: false });
+
+
+  } catch (error) {
+    console.error('❌ Error during execution:', error);
+    // Attempt to capture error state
+    try {
+      await page.screenshot({ path: 'screenshots/error-state.png', fullPage: false });
+    } catch (e) {
+      console.error('Failed to capture error screenshot');
+    }
+  } finally {
+    await browser.close();
+    console.log('✅ Script finished.');
+  }
 })();

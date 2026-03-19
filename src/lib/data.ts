@@ -1,334 +1,376 @@
-// Données mockées pour le dashboard Pulse
-// Mode database-free : à remplacer par une vraie connexion base de données
+import { create } from 'zustand';
 
-import { useState, useCallback } from 'react';
-
-export interface Incident {
-  id: string;
-  endpoint: string;
-  status: 'critical' | 'warning' | 'resolved';
-  message: string;
-  timestamp: string;
-  duration: string;
-}
+// ============================================
+// Types - Endpoint
+// ============================================
+export type EndpointStatus = 'healthy' | 'degraded' | 'down';
 
 export interface Endpoint {
   id: string;
   name: string;
   url: string;
-  status: 'healthy' | 'degraded' | 'down';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  status: EndpointStatus;
   latency: number;
   uptime: number;
   lastCheck: string;
+  interval: string;
+  timeout: string;
 }
 
-export interface Metric {
-  label: string;
-  value: string;
-  delta: string;
-  trend: 'up' | 'down' | 'neutral';
-}
+export type Method = Endpoint['method'];
+export type Interval = '30s' | '60s' | '5m' | '15m';
+export type Timeout = '5s' | '10s' | '30s';
 
 export interface EndpointFormData {
   name: string;
   url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  interval: '30s' | '60s' | '5m' | '15m';
-  timeout: '5s' | '10s' | '30s';
+  method: Method;
+  interval: Interval;
+  timeout: Timeout;
 }
 
-export const dashboardMetrics: Metric[] = [
-  { label: 'Total API calls', value: '1.2M', delta: '+12.4%', trend: 'up' },
-  { label: 'Avg response time', value: '142ms', delta: '-8.2%', trend: 'down' },
-  { label: 'Uptime (24h)', value: '99.94%', delta: '+0.02%', trend: 'up' },
-  { label: 'Error rate', value: '0.08%', delta: '-0.03%', trend: 'down' },
-];
-
-export const recentIncidents: Incident[] = [
-  {
-    id: 'inc-001',
-    endpoint: 'POST /api/users',
-    status: 'critical',
-    message: 'Connection timeout after 30s',
-    timestamp: '2 min ago',
-    duration: '12m 34s',
-  },
-  {
-    id: 'inc-002',
-    endpoint: 'GET /api/products',
-    status: 'warning',
-    message: 'Elevated latency detected (>500ms)',
-    timestamp: '15 min ago',
-    duration: '3m 12s',
-  },
-  {
-    id: 'inc-003',
-    endpoint: 'GET /api/analytics',
-    status: 'resolved',
-    message: 'SSL certificate renewed successfully',
-    timestamp: '1h ago',
-    duration: '45m 00s',
-  },
-  {
-    id: 'inc-004',
-    endpoint: 'POST /api/webhooks',
-    status: 'resolved',
-    message: 'Rate limit exceeded - auto-recovered',
-    timestamp: '3h ago',
-    duration: '8m 22s',
-  },
-];
-
-export const monitoredEndpoints: Endpoint[] = [
-  { id: 'ep-001', name: 'User Service', url: 'api.example.com/users', status: 'healthy', latency: 45, uptime: 99.99, lastCheck: 'Just now' },
-  { id: 'ep-002', name: 'Payment Gateway', url: 'api.example.com/payments', status: 'healthy', latency: 128, uptime: 99.98, lastCheck: 'Just now' },
-  { id: 'ep-003', name: 'Auth Service', url: 'api.example.com/auth', status: 'degraded', latency: 520, uptime: 99.85, lastCheck: 'Just now' },
-  { id: 'ep-004', name: 'Analytics', url: 'api.example.com/analytics', status: 'healthy', latency: 89, uptime: 99.97, lastCheck: 'Just now' },
-  { id: 'ep-005', name: 'Notifications', url: 'api.example.com/notifications', status: 'down', latency: 0, uptime: 98.42, lastCheck: 'Just now' },
-  { id: 'ep-006', name: 'Search Engine', url: 'api.example.com/search', status: 'healthy', latency: 156, uptime: 99.95, lastCheck: 'Just now' },
-];
-
-export const statusColors = {
-  healthy: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20', dot: 'bg-green-400' },
-  degraded: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20', dot: 'bg-yellow-400' },
-  down: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', dot: 'bg-red-400' },
-  critical: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', dot: 'bg-red-400' },
-  warning: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20', dot: 'bg-yellow-400' },
-  resolved: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20', dot: 'bg-green-400' },
-};
-
-// ============================================
-// ENDPOINTS STORE (React State)
-// ============================================
-
-const initialEndpoints: Endpoint[] = [
-  { id: 'ep-001', name: 'User Service', url: 'api.example.com/users', status: 'healthy', latency: 45, uptime: 99.99, lastCheck: 'Just now' },
-  { id: 'ep-002', name: 'Payment Gateway', url: 'api.example.com/payments', status: 'healthy', latency: 128, uptime: 99.98, lastCheck: 'Just now' },
-  { id: 'ep-003', name: 'Auth Service', url: 'api.example.com/auth', status: 'degraded', latency: 520, uptime: 99.85, lastCheck: 'Just now' },
-  { id: 'ep-004', name: 'Analytics', url: 'api.example.com/analytics', status: 'healthy', latency: 89, uptime: 99.97, lastCheck: 'Just now' },
-  { id: 'ep-005', name: 'Notifications', url: 'api.example.com/notifications', status: 'down', latency: 0, uptime: 98.42, lastCheck: 'Just now' },
-  { id: 'ep-006', name: 'Search Engine', url: 'api.example.com/search', status: 'healthy', latency: 156, uptime: 99.95, lastCheck: 'Just now' },
-  { id: 'ep-007', name: 'Image CDN', url: 'cdn.example.com/images', status: 'healthy', latency: 32, uptime: 99.99, lastCheck: 'Just now' },
-  { id: 'ep-008', name: 'Email Service', url: 'api.example.com/emails', status: 'healthy', latency: 78, uptime: 99.92, lastCheck: 'Just now' },
-  { id: 'ep-009', name: 'File Storage', url: 'api.example.com/storage', status: 'degraded', latency: 340, uptime: 99.78, lastCheck: 'Just now' },
-  { id: 'ep-010', name: 'ML Inference', url: 'api.example.com/ml', status: 'healthy', latency: 245, uptime: 99.95, lastCheck: 'Just now' },
-];
-
-function generateId(): string {
-  return `ep-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+export interface EndpointStore {
+  endpoints: Endpoint[];
+  addEndpoint: (data: EndpointFormData) => void;
+  removeEndpoint: (id: string) => void;
+  updateEndpoint: (id: string, data: Partial<Endpoint>) => void;
 }
 
-// Valid React hook - useState is called directly inside the hook
-export function useEndpointsStore() {
-  const [endpoints, setEndpoints] = useState<Endpoint[]>(initialEndpoints);
+const generateId = () => Math.random().toString(36).substring(2, 9);
 
-  const addEndpoint = useCallback((data: EndpointFormData): Endpoint => {
-    const newEndpoint: Endpoint = {
-      id: generateId(),
-      name: data.name,
-      url: data.url.replace(/^https?:\/\//, ''),
+export const useEndpointsStore = create<EndpointStore>((set) => ({
+  endpoints: [
+    {
+      id: '1',
+      name: 'Production API',
+      url: 'https://api.example.com/health',
+      method: 'GET',
       status: 'healthy',
-      latency: Math.floor(Math.random() * 100) + 20,
+      latency: 45,
+      uptime: 99.98,
+      lastCheck: '2 min ago',
+      interval: '60s',
+      timeout: '10s',
+    },
+    {
+      id: '2',
+      name: 'Auth Service',
+      url: 'https://auth.example.com/status',
+      method: 'GET',
+      status: 'healthy',
+      latency: 32,
+      uptime: 99.99,
+      lastCheck: '1 min ago',
+      interval: '60s',
+      timeout: '10s',
+    },
+    {
+      id: '3',
+      name: 'Database Primary',
+      url: 'https://db.example.com/health',
+      method: 'GET',
+      status: 'degraded',
+      latency: 285,
+      uptime: 98.5,
+      lastCheck: '30s ago',
+      interval: '30s',
+      timeout: '5s',
+    },
+    {
+      id: '4',
+      name: 'Cache Layer',
+      url: 'https://cache.example.com/ping',
+      method: 'GET',
+      status: 'healthy',
+      latency: 12,
       uptime: 100,
-      lastCheck: 'Just now',
-    };
-    setEndpoints((prev) => [newEndpoint, ...prev]);
-    return newEndpoint;
-  }, []);
+      lastCheck: '1 min ago',
+      interval: '60s',
+      timeout: '5s',
+    },
+    {
+      id: '5',
+      name: 'CDN Edge',
+      url: 'https://cdn.example.com/health',
+      method: 'GET',
+      status: 'down',
+      latency: 0,
+      uptime: 95.2,
+      lastCheck: '5 min ago',
+      interval: '60s',
+      timeout: '10s',
+    },
+  ],
+  addEndpoint: (data) =>
+    set((state) => ({
+      endpoints: [
+        ...state.endpoints,
+        {
+          id: generateId(),
+          ...data,
+          status: 'healthy' as EndpointStatus,
+          latency: 0,
+          uptime: 100,
+          lastCheck: 'Just now',
+        },
+      ],
+    })),
+  removeEndpoint: (id) =>
+    set((state) => ({
+      endpoints: state.endpoints.filter((e) => e.id !== id),
+    })),
+  updateEndpoint: (id, data) =>
+    set((state) => ({
+      endpoints: state.endpoints.map((e) =>
+        e.id === id ? { ...e, ...data } : e
+      ),
+    })),
+}));
 
-  return { endpoints, addEndpoint };
-}
-
-// Reset function for testing purposes
-export function resetEndpointsStore() {
-  // This is a no-op since each test gets fresh state via useState
-  // The function exists for API compatibility
-}
-
-// Pure function for filtering endpoints (used in tests and components)
-export function filterEndpoints(query: string, list: Endpoint[]): Endpoint[] {
-  if (!query.trim()) return list;
-  const lowerQuery = query.toLowerCase().trim();
-  return list.filter(
-    (endpoint) =>
-      endpoint.name.toLowerCase().includes(lowerQuery) ||
-      endpoint.url.toLowerCase().includes(lowerQuery)
+export function filterEndpoints(query: string, endpoints: Endpoint[]): Endpoint[] {
+  if (!query.trim()) return endpoints;
+  const lowerQuery = query.toLowerCase();
+  return endpoints.filter(
+    (e) =>
+      e.name.toLowerCase().includes(lowerQuery) ||
+      e.url.toLowerCase().includes(lowerQuery)
   );
 }
 
-// Re-export for compatibility
-export const endpointsList: Endpoint[] = [];
+export const statusColors = {
+  healthy: {
+    dot: 'bg-green-400',
+    bg: 'bg-green-500/10',
+    text: 'text-green-400',
+    border: 'border-green-500/20',
+  },
+  degraded: {
+    dot: 'bg-yellow-400',
+    bg: 'bg-yellow-500/10',
+    text: 'text-yellow-400',
+    border: 'border-yellow-500/20',
+  },
+  down: {
+    dot: 'bg-red-400',
+    bg: 'bg-red-500/10',
+    text: 'text-red-400',
+    border: 'border-red-500/20',
+  },
+};
 
 // ============================================
-// DONNÉES POUR LA PAGE ENDPOINTS
+// Types - Dashboard
 // ============================================
+export interface DashboardMetric {
+  label: string;
+  value: string;
+  delta?: string;
+  up?: boolean;
+}
 
-export const endpointsListStatic: Endpoint[] = [
-  { id: 'ep-001', name: 'User Service', url: 'api.example.com/users', status: 'healthy', latency: 45, uptime: 99.99, lastCheck: 'Just now' },
-  { id: 'ep-002', name: 'Payment Gateway', url: 'api.example.com/payments', status: 'healthy', latency: 128, uptime: 99.98, lastCheck: 'Just now' },
-  { id: 'ep-003', name: 'Auth Service', url: 'api.example.com/auth', status: 'degraded', latency: 520, uptime: 99.85, lastCheck: 'Just now' },
-  { id: 'ep-004', name: 'Analytics', url: 'api.example.com/analytics', status: 'healthy', latency: 89, uptime: 99.97, lastCheck: 'Just now' },
-  { id: 'ep-005', name: 'Notifications', url: 'api.example.com/notifications', status: 'down', latency: 0, uptime: 98.42, lastCheck: 'Just now' },
-  { id: 'ep-006', name: 'Search Engine', url: 'api.example.com/search', status: 'healthy', latency: 156, uptime: 99.95, lastCheck: 'Just now' },
-  { id: 'ep-007', name: 'Image CDN', url: 'cdn.example.com/images', status: 'healthy', latency: 32, uptime: 99.99, lastCheck: 'Just now' },
-  { id: 'ep-008', name: 'Email Service', url: 'api.example.com/emails', status: 'healthy', latency: 78, uptime: 99.92, lastCheck: 'Just now' },
-  { id: 'ep-009', name: 'File Storage', url: 'api.example.com/storage', status: 'degraded', latency: 340, uptime: 99.78, lastCheck: 'Just now' },
-  { id: 'ep-010', name: 'ML Inference', url: 'api.example.com/ml', status: 'healthy', latency: 245, uptime: 99.95, lastCheck: 'Just now' },
+export const dashboardMetrics: DashboardMetric[] = [
+  { label: 'Total endpoints', value: '24', delta: '+3', up: true },
+  { label: 'Healthy', value: '21', delta: '+2', up: true },
+  { label: 'Avg latency', value: '48ms', delta: '-12ms', up: true },
+  { label: 'Uptime (30d)', value: '99.94%', delta: null },
+];
+
+export interface RecentIncident {
+  id: string;
+  title: string;
+  severity: 'critical' | 'warning' | 'info';
+  status: 'resolved' | 'monitoring' | 'investigating';
+  endpoint: string;
+  time: string;
+}
+
+export const recentIncidents: RecentIncident[] = [
+  {
+    id: 'inc-001',
+    title: 'CDN Edge connection timeout',
+    severity: 'critical',
+    status: 'resolved',
+    endpoint: 'CDN Edge',
+    time: '2 hours ago',
+  },
+  {
+    id: 'inc-002',
+    title: 'Database latency spike',
+    severity: 'warning',
+    status: 'monitoring',
+    endpoint: 'Database Primary',
+    time: '5 hours ago',
+  },
+  {
+    id: 'inc-003',
+    title: 'SSL certificate expiring soon',
+    severity: 'info',
+    status: 'investigating',
+    endpoint: 'Auth Service',
+    time: '1 day ago',
+  },
+];
+
+export interface MonitoredEndpoint {
+  id: string;
+  name: string;
+  url: string;
+  status: EndpointStatus;
+}
+
+export const monitoredEndpoints: MonitoredEndpoint[] = [
+  { id: '1', name: 'Production API', url: 'https://api.example.com/health', status: 'healthy' },
+  { id: '2', name: 'Auth Service', url: 'https://auth.example.com/status', status: 'healthy' },
+  { id: '3', name: 'Database Primary', url: 'https://db.example.com/health', status: 'degraded' },
+  { id: '4', name: 'Cache Layer', url: 'https://cache.example.com/ping', status: 'healthy' },
+  { id: '5', name: 'CDN Edge', url: 'https://cdn.example.com/health', status: 'down' },
 ];
 
 // ============================================
-// DONNÉES POUR LA PAGE INCIDENTS
+// Types - Analytics
 // ============================================
+export interface AnalyticsMetric {
+  label: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down' | 'neutral';
+}
+
+export const analyticsMetrics: AnalyticsMetric[] = [
+  { label: 'Total requests', value: '1.2M', change: '+12.5%', trend: 'up' },
+  { label: 'Avg response time', value: '48ms', change: '-8.2%', trend: 'down' },
+  { label: 'Error rate', value: '0.12%', change: '-0.04%', trend: 'down' },
+  { label: 'p95 latency', value: '125ms', change: '-15ms', trend: 'down' },
+];
+
+export interface LatencyDataPoint {
+  time: string;
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
+export const latencyHistory: LatencyDataPoint[] = [
+  { time: '00:00', p50: 42, p95: 118, p99: 245 },
+  { time: '04:00', p50: 38, p95: 105, p99: 220 },
+  { time: '08:00', p50: 55, p95: 145, p99: 310 },
+  { time: '12:00', p50: 62, p95: 168, p99: 380 },
+  { time: '16:00', p50: 58, p95: 155, p99: 345 },
+  { time: '20:00', p50: 45, p95: 128, p99: 275 },
+];
+
+export interface RequestVolumeDataPoint {
+  time: string;
+  requests: number;
+  errors: number;
+}
+
+export const requestVolume: RequestVolumeDataPoint[] = [
+  { time: '00:00', requests: 12000, errors: 12 },
+  { time: '04:00', requests: 8500, errors: 8 },
+  { time: '08:00', requests: 45000, errors: 45 },
+  { time: '12:00', requests: 68000, errors: 72 },
+  { time: '16:00', requests: 72000, errors: 85 },
+  { time: '20:00', requests: 52000, errors: 48 },
+];
+
+export interface TopEndpoint {
+  id: string;
+  name: string;
+  requests: number;
+  avgLatency: number;
+  errorRate: number;
+}
+
+export const topEndpoints: TopEndpoint[] = [
+  { id: '1', name: 'Production API', requests: 450000, avgLatency: 42, errorRate: 0.08 },
+  { id: '2', name: 'Auth Service', requests: 380000, avgLatency: 28, errorRate: 0.05 },
+  { id: '3', name: 'Payment Gateway', requests: 210000, avgLatency: 85, errorRate: 0.12 },
+  { id: '4', name: 'User Profile', requests: 180000, avgLatency: 35, errorRate: 0.03 },
+  { id: '5', name: 'Search Service', requests: 95000, avgLatency: 65, errorRate: 0.15 },
+];
+
+// ============================================
+// Types - Incidents
+// ============================================
+export interface Incident {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'critical' | 'warning' | 'info';
+  status: 'resolved' | 'monitoring' | 'investigating';
+  endpoint: string;
+  startedAt: string;
+  resolvedAt?: string;
+  affectedRegions: string[];
+}
 
 export const incidentsList: Incident[] = [
   {
     id: 'inc-001',
-    endpoint: 'POST /api/users',
-    status: 'critical',
-    message: 'Connection timeout after 30s - Database connection pool exhausted',
-    timestamp: '2 min ago',
-    duration: '12m 34s',
+    title: 'CDN Edge connection timeout',
+    description: 'Multiple timeout errors detected on CDN Edge endpoints',
+    severity: 'critical',
+    status: 'resolved',
+    endpoint: 'CDN Edge',
+    startedAt: '2024-01-15T14:30:00Z',
+    resolvedAt: '2024-01-15T16:45:00Z',
+    affectedRegions: ['us-east-1', 'us-west-2'],
   },
   {
     id: 'inc-002',
-    endpoint: 'GET /api/products',
-    status: 'warning',
-    message: 'Elevated latency detected (>500ms) for 5 consecutive checks',
-    timestamp: '15 min ago',
-    duration: '3m 12s',
+    title: 'Database latency spike',
+    description: 'Elevated latency detected on primary database cluster',
+    severity: 'warning',
+    status: 'monitoring',
+    endpoint: 'Database Primary',
+    startedAt: '2024-01-15T10:00:00Z',
+    affectedRegions: ['us-east-1'],
   },
   {
     id: 'inc-003',
-    endpoint: 'GET /api/analytics',
-    status: 'resolved',
-    message: 'SSL certificate renewed successfully',
-    timestamp: '1h ago',
-    duration: '45m 00s',
-  },
-  {
-    id: 'inc-004',
-    endpoint: 'POST /api/webhooks',
-    status: 'resolved',
-    message: 'Rate limit exceeded - auto-recovered after 8 minutes',
-    timestamp: '3h ago',
-    duration: '8m 22s',
-  },
-  {
-    id: 'inc-005',
-    endpoint: 'GET /api/search',
-    status: 'resolved',
-    message: 'Elasticsearch cluster rebalancing completed',
-    timestamp: '6h ago',
-    duration: '22m 15s',
-  },
-  {
-    id: 'inc-006',
-    endpoint: 'POST /api/checkout',
-    status: 'warning',
-    message: 'High error rate detected (5.2%) - payment provider experiencing issues',
-    timestamp: '8h ago',
-    duration: '15m 45s',
+    title: 'SSL certificate expiring soon',
+    description: 'SSL certificate for auth.example.com expires in 7 days',
+    severity: 'info',
+    status: 'investigating',
+    endpoint: 'Auth Service',
+    startedAt: '2024-01-14T09:00:00Z',
+    affectedRegions: ['global'],
   },
 ];
 
-export const incidentTimeline = [
-  { time: '14:32', event: 'Incident created', user: 'System' },
-  { time: '14:34', event: 'Alert triggered: Critical threshold exceeded', user: 'System' },
-  { time: '14:35', event: 'On-call engineer notified', user: 'System' },
-  { time: '14:38', event: 'Investigation started', user: 'John Doe' },
-  { time: '14:42', event: 'Root cause identified: Database connection pool', user: 'John Doe' },
-  { time: '14:45', event: 'Mitigation applied: Increased pool size', user: 'John Doe' },
-  { time: '14:48', event: 'Services recovering', user: 'System' },
-  { time: '14:55', event: 'Incident resolved', user: 'John Doe' },
-];
-
-// ============================================
-// DONNÉES POUR LA PAGE ANALYTICS
-// ============================================
-
-export const analyticsMetrics: Metric[] = [
-  { label: 'Total requests', value: '24.8M', delta: '+18.2%', trend: 'up' },
-  { label: 'Avg latency', value: '128ms', delta: '-12.5%', trend: 'down' },
-  { label: 'P99 latency', value: '485ms', delta: '-8.3%', trend: 'down' },
-  { label: 'Error rate', value: '0.12%', delta: '+0.02%', trend: 'up' },
-];
-
-export const latencyHistory = [
-  { time: '00:00', value: 120 },
-  { time: '04:00', value: 98 },
-  { time: '08:00', value: 145 },
-  { time: '12:00', value: 168 },
-  { time: '16:00', value: 152 },
-  { time: '20:00', value: 128 },
-  { time: '24:00', value: 112 },
-];
-
-export const requestVolume = [
-  { time: 'Mon', value: 3.2 },
-  { time: 'Tue', value: 3.8 },
-  { time: 'Wed', value: 4.1 },
-  { time: 'Thu', value: 3.9 },
-  { time: 'Fri', value: 4.5 },
-  { time: 'Sat', value: 2.8 },
-  { time: 'Sun', value: 2.4 },
-];
-
-export const topEndpoints = [
-  { name: 'GET /api/users', requests: '8.2M', latency: '45ms', errors: '0.02%' },
-  { name: 'POST /api/auth', requests: '5.4M', latency: '78ms', errors: '0.05%' },
-  { name: 'GET /api/products', requests: '4.1M', latency: '92ms', errors: '0.08%' },
-  { name: 'POST /api/orders', requests: '2.8M', latency: '156ms', errors: '0.12%' },
-  { name: 'GET /api/search', requests: '2.2M', latency: '245ms', errors: '0.15%' },
-];
-
-// ============================================
-// DONNÉES POUR LA PAGE TEAM
-// ============================================
-
-export interface TeamMember {
+export interface IncidentTimelineEvent {
   id: string;
-  name: string;
-  email: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
-  status: 'active' | 'invited';
-  avatar: string;
-  lastActive: string;
+  type: 'started' | 'updated' | 'resolved';
+  message: string;
+  timestamp: string;
+  incidentId: string;
 }
 
-export const teamMembers: TeamMember[] = [
-  { id: 'tm-001', name: 'John Doe', email: 'john@acme.com', role: 'owner', status: 'active', avatar: 'JD', lastActive: 'Just now' },
-  { id: 'tm-002', name: 'Sarah Chen', email: 'sarah@acme.com', role: 'admin', status: 'active', avatar: 'SC', lastActive: '5m ago' },
-  { id: 'tm-003', name: 'Mike Wilson', email: 'mike@acme.com', role: 'member', status: 'active', avatar: 'MW', lastActive: '1h ago' },
-  { id: 'tm-004', name: 'Emily Davis', email: 'emily@acme.com', role: 'member', status: 'active', avatar: 'ED', lastActive: '3h ago' },
-  { id: 'tm-005', name: 'Alex Kim', email: 'alex@acme.com', role: 'viewer', status: 'invited', avatar: 'AK', lastActive: 'Pending' },
+export const incidentTimeline: IncidentTimelineEvent[] = [
+  { id: 'evt-001', type: 'started', message: 'Incident started: CDN Edge connection timeout', timestamp: '2024-01-15T14:30:00Z', incidentId: 'inc-001' },
+  { id: 'evt-002', type: 'updated', message: 'Investigation started', timestamp: '2024-01-15T14:35:00Z', incidentId: 'inc-001' },
+  { id: 'evt-003', type: 'updated', message: 'Root cause identified: DDoS attack', timestamp: '2024-01-15T15:00:00Z', incidentId: 'inc-001' },
+  { id: 'evt-004', type: 'updated', message: 'Mitigation in progress', timestamp: '2024-01-15T15:30:00Z', incidentId: 'inc-001' },
+  { id: 'evt-005', type: 'resolved', message: 'Incident resolved', timestamp: '2024-01-15T16:45:00Z', incidentId: 'inc-001' },
 ];
 
-export const rolePermissions = {
-  owner: ['Full access', 'Billing', 'Delete workspace'],
-  admin: ['Manage endpoints', 'Manage team', 'View analytics'],
-  member: ['View endpoints', 'View incidents', 'Create incidents'],
-  viewer: ['View only'],
-};
-
 // ============================================
-// DONNÉES POUR LA PAGE NOTIFICATIONS
+// Types - Notifications
 // ============================================
-
 export interface NotificationChannel {
   id: string;
-  name: string;
   type: 'email' | 'slack' | 'discord' | 'webhook' | 'sms';
-  status: 'active' | 'inactive';
-  recipients: number;
-  lastTriggered: string;
+  name: string;
+  config: Record<string, string>;
+  enabled: boolean;
 }
 
 export const notificationChannels: NotificationChannel[] = [
-  { id: 'nc-001', name: 'Engineering Team', type: 'slack', status: 'active', recipients: 12, lastTriggered: '2 min ago' },
-  { id: 'nc-002', name: 'On-call Rotation', type: 'sms', status: 'active', recipients: 4, lastTriggered: '15 min ago' },
-  { id: 'nc-003', name: 'Critical Alerts', type: 'email', status: 'active', recipients: 8, lastTriggered: '1h ago' },
-  { id: 'nc-004', name: 'Dev Channel', type: 'discord', status: 'active', recipients: 25, lastTriggered: '3h ago' },
-  { id: 'nc-005', name: 'Management', type: 'webhook', status: 'inactive', recipients: 3, lastTriggered: 'Never' },
+  { id: 'ch-001', type: 'email', name: 'On-call Team', config: { email: 'team@example.com' }, enabled: true },
+  { id: 'ch-002', type: 'slack', type: 'slack', name: '#incidents', config: { channel: '#incidents', webhookUrl: 'https://hooks.slack.com/xxx' }, enabled: true },
+  { id: 'ch-003', type: 'webhook', name: 'PagerDuty', config: { url: 'https://events.pagerduty.com/v2/enqueue' }, enabled: false },
 ];
 
 export interface AlertRule {
@@ -336,33 +378,74 @@ export interface AlertRule {
   name: string;
   condition: string;
   severity: 'critical' | 'warning' | 'info';
-  channels: number;
+  channels: string[];
   enabled: boolean;
 }
 
 export const alertRules: AlertRule[] = [
-  { id: 'ar-001', name: 'Endpoint Down', condition: 'Status = down for 1 min', severity: 'critical', channels: 3, enabled: true },
-  { id: 'ar-002', name: 'High Latency', condition: 'Latency > 500ms for 5 min', severity: 'warning', channels: 2, enabled: true },
-  { id: 'ar-003', name: 'Error Rate Spike', condition: 'Error rate > 1% for 2 min', severity: 'critical', channels: 3, enabled: true },
-  { id: 'ar-004', name: 'SSL Expiring', condition: 'Certificate expires in < 7 days', severity: 'info', channels: 1, enabled: true },
-  { id: 'ar-005', name: 'Uptime Drop', condition: 'Uptime < 99.9% in 1 hour', severity: 'warning', channels: 2, enabled: false },
+  { id: 'rule-001', name: 'Endpoint Down', condition: 'status == down', severity: 'critical', channels: ['ch-001', 'ch-002'], enabled: true },
+  { id: 'rule-002', name: 'High Latency', condition: 'latency > 500ms', severity: 'warning', channels: ['ch-001'], enabled: true },
+  { id: 'rule-003', name: 'Error Rate Spike', condition: 'error_rate > 1%', severity: 'critical', channels: ['ch-001', 'ch-002'], enabled: true },
+  { id: 'rule-004', name: 'SSL Expiring', condition: 'ssl_days_remaining < 30', severity: 'info', channels: ['ch-001'], enabled: false },
 ];
 
 // ============================================
-// DONNÉES POUR LA PAGE SETTINGS
+// Types - Team
 // ============================================
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  avatar?: string;
+  joinedAt: string;
+}
 
-export const workspaceSettings = {
-  name: 'production',
-  region: 'us-east-1',
-  timezone: 'America/New_York',
-  autoResolve: true,
-  retentionDays: 30,
+export const teamMembers: TeamMember[] = [
+  { id: 'tm-001', name: 'John Doe', email: 'john@example.com', role: 'owner', joinedAt: '2023-06-15T10:00:00Z' },
+  { id: 'tm-002', name: 'Jane Smith', email: 'jane@example.com', role: 'admin', joinedAt: '2023-07-20T14:30:00Z' },
+  { id: 'tm-003', name: 'Bob Wilson', email: 'bob@example.com', role: 'member', joinedAt: '2023-09-10T09:15:00Z' },
+  { id: 'tm-004', name: 'Alice Brown', email: 'alice@example.com', role: 'viewer', joinedAt: '2024-01-05T11:00:00Z' },
+];
+
+export const rolePermissions: Record<string, string[]> = {
+  owner: ['read', 'write', 'delete', 'manage_team', 'manage_billing', 'manage_settings'],
+  admin: ['read', 'write', 'delete', 'manage_team', 'manage_settings'],
+  member: ['read', 'write'],
+  viewer: ['read'],
 };
 
-export const billingInfo = {
-  plan: 'Pro',
-  price: '$49/mo',
-  nextBilling: 'Dec 15, 2024',
-  usage: { endpoints: '10/20', alerts: '45/100', team: '4/10' },
+// ============================================
+// Types - Settings
+// ============================================
+export interface WorkspaceSettings {
+  name: string;
+  timezone: string;
+  dateFormat: string;
+  defaultInterval: string;
+  defaultTimeout: string;
+}
+
+export const workspaceSettings: WorkspaceSettings = {
+  name: 'Acme Corp',
+  timezone: 'UTC',
+  dateFormat: 'YYYY-MM-DD',
+  defaultInterval: '60s',
+  defaultTimeout: '10s',
+};
+
+export interface BillingInfo {
+  plan: 'free' | 'pro' | 'enterprise';
+  billingEmail: string;
+  nextBillingDate: string;
+  amount: number;
+  paymentMethod: string;
+}
+
+export const billingInfo: BillingInfo = {
+  plan: 'pro',
+  billingEmail: 'billing@acme.com',
+  nextBillingDate: '2024-02-01',
+  amount: 99,
+  paymentMethod: 'Visa ****4242',
 };
