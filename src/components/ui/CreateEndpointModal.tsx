@@ -6,7 +6,6 @@ import { Globe, Link2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EndpointFormData } from "@/lib/data";
 
-// Mock framer-motion in tests
 const MotionDiv = motion.div;
 
 interface CreateEndpointModalProps {
@@ -96,7 +95,6 @@ export const CreateEndpointModal = forwardRef<HTMLDivElement, CreateEndpointModa
       <AnimatePresence>
         {isOpen && (
           <MotionDiv
-            ref={ref}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -125,51 +123,45 @@ export const CreateEndpointModal = forwardRef<HTMLDivElement, CreateEndpointModa
                     id="modal-title"
                     className="text-sm font-semibold text-zinc-100"
                   >
-                    Create endpoint
+                    Add Endpoint
                   </h2>
                 </div>
                 <button
-                  aria-label="Close modal"
-                  className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40"
                   onClick={onClose}
-                  disabled={isSubmitting}
+                  className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors"
+                  aria-label="Close modal"
                 >
-                  <X size={15} />
+                  <X size={14} />
                 </button>
               </div>
 
               {/* Form */}
-              <form
-                className="px-5 py-5 flex flex-col gap-4"
-                onSubmit={handleSubmit}
-              >
+              <form onSubmit={handleSubmit} className="px-5 py-5 flex flex-col gap-4">
                 {/* Name Field */}
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="endpoint-name"
                     className="text-xs font-medium text-zinc-400"
                   >
-                    Name
+                    Endpoint Name
                   </label>
                   <input
-                    ref={nameInputRef}
                     id="endpoint-name"
+                    ref={nameInputRef}
                     type="text"
-                    placeholder="Production API"
+                    placeholder="User Service"
                     value={name}
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      if (errors.name) setErrors({ ...errors, name: undefined });
-                    }}
+                    onChange={(e) => setName(e.target.value)}
                     className={cn(
-                      "h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border transition-colors duration-150 placeholder:text-zinc-600 focus:outline-none focus:ring-1",
+                      "h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border",
                       errors.name
-                        ? "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/15"
-                        : "border-white/[0.08] focus:border-red-500/50 focus:ring-red-500/15"
+                        ? "border-red-500/50 focus:border-red-500/60"
+                        : "border-white/[0.08] focus:border-red-500/40",
+                      "placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500/15 transition-colors duration-150"
                     )}
                   />
                   {errors.name && (
-                    <span className="text-xs text-red-400">{errors.name}</span>
+                    <p className="text-[11px] text-red-400">{errors.name}</p>
                   )}
                 </div>
 
@@ -184,46 +176,40 @@ export const CreateEndpointModal = forwardRef<HTMLDivElement, CreateEndpointModa
                   <div className="relative">
                     <Link2
                       size={13}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600"
                     />
                     <input
                       id="endpoint-url"
                       type="text"
-                      placeholder="https://api.example.com/health"
+                      placeholder="https://api.example.com/users"
                       value={url}
-                      onChange={(e) => {
-                        setUrl(e.target.value);
-                        if (errors.url) setErrors({ ...errors, url: undefined });
-                      }}
+                      onChange={(e) => setUrl(e.target.value)}
                       className={cn(
-                        "w-full h-9 pl-9 pr-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border transition-colors duration-150 placeholder:text-zinc-600 focus:outline-none focus:ring-1",
+                        "w-full h-9 pl-9 pr-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border",
                         errors.url
-                          ? "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/15"
-                          : "border-white/[0.08] focus:border-red-500/50 focus:ring-red-500/15"
+                          ? "border-red-500/50 focus:border-red-500/60"
+                          : "border-white/[0.08] focus:border-red-500/40",
+                        "placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500/15 transition-colors duration-150"
                       )}
                     />
                   </div>
                   {errors.url && (
-                    <span className="text-xs text-red-400">{errors.url}</span>
+                    <p className="text-[11px] text-red-400">{errors.url}</p>
                   )}
                 </div>
 
                 {/* Method & Interval Row */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor="endpoint-method"
-                      className="text-xs font-medium text-zinc-400"
-                    >
+                    <label className="text-xs font-medium text-zinc-400">
                       Method
                     </label>
                     <select
-                      id="endpoint-method"
                       value={method}
                       onChange={(e) =>
                         setMethod(e.target.value as EndpointFormData["method"])
                       }
-                      className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/50 focus:ring-red-500/15 transition-colors"
+                      className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-2 focus:ring-red-500/15 transition-colors appearance-none"
                     >
                       <option value="GET">GET</option>
                       <option value="POST">POST</option>
@@ -232,69 +218,72 @@ export const CreateEndpointModal = forwardRef<HTMLDivElement, CreateEndpointModa
                       <option value="PATCH">PATCH</option>
                     </select>
                   </div>
+
                   <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor="endpoint-interval"
-                      className="text-xs font-medium text-zinc-400"
-                    >
-                      Interval
+                    <label className="text-xs font-medium text-zinc-400">
+                      Check Interval
                     </label>
                     <select
-                      id="endpoint-interval"
                       value={interval}
                       onChange={(e) =>
-                        setInterval(e.target.value as EndpointFormData["interval"])
+                        setInterval(
+                          e.target.value as EndpointFormData["interval"]
+                        )
                       }
-                      className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/50 focus:ring-red-500/15 transition-colors"
+                      className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-2 focus:ring-red-500/15 transition-colors appearance-none"
                     >
-                      <option value="30s">30s</option>
-                      <option value="60s">60s</option>
-                      <option value="5m">5m</option>
-                      <option value="15m">15m</option>
+                      <option value="30s">Every 30s</option>
+                      <option value="60s">Every 1m</option>
+                      <option value="5m">Every 5m</option>
+                      <option value="15m">Every 15m</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Timeout */}
+                {/* Timeout Field */}
                 <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="endpoint-timeout"
-                    className="text-xs font-medium text-zinc-400"
-                  >
+                  <label className="text-xs font-medium text-zinc-400">
                     Timeout
                   </label>
                   <select
-                    id="endpoint-timeout"
                     value={timeout}
                     onChange={(e) =>
                       setTimeout(e.target.value as EndpointFormData["timeout"])
                     }
-                    className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/50 focus:ring-red-500/15 transition-colors"
+                    className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-2 focus:ring-red-500/15 transition-colors appearance-none"
                   >
-                    <option value="5s">5s</option>
-                    <option value="10s">10s</option>
-                    <option value="30s">30s</option>
+                    <option value="5s">5 seconds</option>
+                    <option value="10s">10 seconds</option>
+                    <option value="30s">30 seconds</option>
                   </select>
                 </div>
 
-                {/* Success Message */}
-                {isSuccess && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-green-500/10 border border-green-500/20">
-                    <div className="w-2 h-2 rounded-full bg-green-400" />
-                    <span className="text-xs text-green-400">
-                      Endpoint created successfully
-                    </span>
-                  </div>
-                )}
-
                 {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting || isSuccess}
-                  className="h-9 mt-1 rounded-md bg-red-500 hover:bg-red-400 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-colors"
-                >
-                  {isSubmitting ? "Creating..." : isSuccess ? "Created!" : "Create endpoint"}
-                </button>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="h-8 px-4 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 text-xs font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={cn(
+                      "h-8 px-4 rounded-md text-xs font-medium transition-colors flex items-center gap-2",
+                      isSuccess
+                        ? "bg-green-500 text-white"
+                        : "bg-red-500 hover:bg-red-400 text-white shadow-[0_0_12px_rgba(239,68,68,0.3)]",
+                      isSubmitting && "opacity-80 cursor-not-allowed"
+                    )}
+                  >
+                    {isSubmitting && (
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    )}
+                    {isSuccess ? "Added!" : "Add Endpoint"}
+                  </button>
+                </div>
               </form>
             </MotionDiv>
           </MotionDiv>
@@ -303,3 +292,4 @@ export const CreateEndpointModal = forwardRef<HTMLDivElement, CreateEndpointModa
     );
   }
 );
+CreateEndpointModal.displayName = "CreateEndpointModal";
