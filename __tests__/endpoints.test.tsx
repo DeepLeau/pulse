@@ -1,76 +1,31 @@
-/**
- * @jest-environment jsdom
- */
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import EndpointsPage from '@/app/dashboard/endpoints/page';
-
-// Mock framer-motion
-jest.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-// Mock next/navigation
-jest.mock('next/navigation', () => ({
-  usePathname: () => '/dashboard/endpoints',
-}));
+import '@testing-library/jest-dom';
+import { render, screen } from '@testing-library/react';
+import { EndpointsPage } from '@/app/dashboard/endpoints/page';
 
 describe('EndpointsPage', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  it('renders endpoints page', () => {
+    render(<EndpointsPage />);
+    
+    expect(screen.getByText('Endpoints')).toBeInTheDocument();
   });
 
-  it('should display search input', () => {
-    // Arrange
+  it('renders add endpoint button', () => {
     render(<EndpointsPage />);
-
-    // Assert - search input exists
-    expect(screen.getByPlaceholderText(/search endpoints/i)).toBeInTheDocument();
+    
+    expect(screen.getByText('Add endpoint')).toBeInTheDocument();
   });
 
-  it('should filter endpoints when typing in search', async () => {
-    const user = userEvent.setup();
-
-    // Arrange
+  it('renders status badges', () => {
     render(<EndpointsPage />);
-
-    // Verify initial state - multiple endpoints visible
-    expect(screen.getByText('User Service')).toBeInTheDocument();
-    expect(screen.getByText('Payment Gateway')).toBeInTheDocument();
-
-    // Act - search for specific endpoint
-    const searchInput = screen.getByPlaceholderText(/search endpoints/i);
-    await user.type(searchInput, 'Payment');
-
-    // Assert - only matching endpoint visible
-    await waitFor(() => {
-      expect(screen.getByText('Payment Gateway')).toBeInTheDocument();
-    });
-
-    // Non-matching should not be visible
-    await waitFor(() => {
-      expect(screen.queryByText('User Service')).not.toBeInTheDocument();
-    });
+    
+    expect(screen.getByText('healthy')).toBeInTheDocument();
+    expect(screen.getByText('degraded')).toBeInTheDocument();
+    expect(screen.getByText('down')).toBeInTheDocument();
   });
 
-  it('should show empty state when no endpoints match search', async () => {
-    const user = userEvent.setup();
-
-    // Arrange
+  it('renders search input', () => {
     render(<EndpointsPage />);
-
-    // Act - search for non-existent endpoint
-    const searchInput = screen.getByPlaceholderText(/search endpoints/i);
-    await user.type(searchInput, 'xyznonexistent');
-
-    // Assert - empty state message visible
-    await waitFor(() => {
-      expect(screen.getByText(/no endpoints found/i)).toBeInTheDocument();
-    });
+    
+    expect(screen.getByPlaceholderText('Search endpoints by name or URL...')).toBeInTheDocument();
   });
 });

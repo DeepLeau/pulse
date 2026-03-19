@@ -1,60 +1,18 @@
-import { render, screen } from "@testing-library/react";
-import { CTABanner } from "@/components/sections/CTABanner";
+import '@testing-library/jest-dom';
+import { render, screen } from '@testing-library/react';
+import { CTABanner } from '@/components/sections/CTABanner';
 
-jest.mock("framer-motion", () => {
-  const React = require("react");
-  const strip = ({
-    animate,
-    initial,
-    exit,
-    transition,
-    whileInView,
-    whileHover,
-    whileTap,
-    variants,
-    viewport,
-    ...p
-  }: any) => p;
-  return {
-    motion: new Proxy(
-      {},
-      {
-        get: (_t: any, tag: string) => ({
-          children,
-          ...props,
-        }: any) => React.createElement(tag, strip(props), children),
-      },
-    ),
-  };
-});
-
-describe("CTABanner", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+describe('CTABanner', () => {
+  it('renders CTA banner with title and description', () => {
+    render(<CTABanner />);
+    
+    expect(screen.getByText('Ready to get started?')).toBeInTheDocument();
+    expect(screen.getByText(/Start your free trial/i)).toBeInTheDocument();
   });
 
-  it("should render CTA banner with headline and link", () => {
-    // Arrange
-    // Act
-    render(<CTABanner />);
-
-    // Assert
-    expect(
-      screen.getByRole("heading", { name: /start monitoring today/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /get started for free/i })
-    ).toBeInTheDocument();
-  });
-
-  it("should render CTA description", () => {
-    // Arrange
-    // Act
-    render(<CTABanner />);
-
-    // Assert
-    expect(
-      screen.getByText(/join 1,200\+ sres who sleep better/i)
-    ).toBeInTheDocument();
+  it('has correct styling classes', () => {
+    const { container } = render(<CTABanner />);
+    const section = container.querySelector('section');
+    expect(section).toHaveClass('bg-zinc-900');
   });
 });

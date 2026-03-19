@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { dashboardMetrics, recentIncidents, monitoredEndpoints, statusColors, type EndpointFormData, useEndpointsStore } from '@/lib/data';
+import { dashboardMetrics, recentIncidents, monitoredEndpoints, statusColors, type EndpointFormData } from '@/lib/data';
+import { useEndpointsStore } from '@/hooks/useEndpointsStore';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Minus, ArrowUpRight, Activity, Globe, Zap } from 'lucide-react';
 import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
