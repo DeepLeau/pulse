@@ -1,13 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, forwardRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Globe, Link2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { EndpointFormData } from "@/lib/data";
-
-// Mock framer-motion in tests
-const MotionDiv = motion.div;
+import { useState } from 'react';
+import { X, Globe, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { EndpointFormData } from '@/lib/data';
 
 interface CreateEndpointModalProps {
   isOpen: boolean;
@@ -15,291 +11,201 @@ interface CreateEndpointModalProps {
   onSubmit: (data: EndpointFormData) => Promise<void>;
 }
 
-export const CreateEndpointModal = forwardRef<HTMLDivElement, CreateEndpointModalProps>(
-  function CreateEndpointModal({ isOpen, onClose, onSubmit }, ref) {
-    const [name, setName] = useState("");
-    const [url, setUrl] = useState("");
-    const [method, setMethod] = useState<EndpointFormData["method"]>("GET");
-    const [interval, setInterval] = useState<EndpointFormData["interval"]>("60s");
-    const [timeout, setTimeout] = useState<EndpointFormData["timeout"]>("10s");
-    const [errors, setErrors] = useState<{ name?: string; url?: string }>({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
+const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const;
+const INTERVALS = ['30s', '60s', '5m', '15m'] as const;
+const TIMEOUTS = ['5s', '10s', '30s'] as const;
 
-    const nameInputRef = useRef<HTMLInputElement>(null);
+export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpointModalProps) {
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+  const [method, setMethod] = useState<EndpointFormData['method']>('GET');
+  const [interval, setInterval] = useState<EndpointFormData['interval']>('60s');
+  const [timeout, setTimeout] = useState<EndpointFormData['timeout']>('10s');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; url?: string }>({});
 
-    useEffect(() => {
-      if (isOpen) {
-        nameInputRef.current?.focus();
-      }
-    }, [isOpen]);
+  const validateForm = (): boolean => {
+    const newErrors: { name?: string; url?: string } = {};
+    
+    if (!name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    
+    if (!url.trim()) {
+      newErrors.url = 'URL is required';
+    } else if (!/^https?:\/\//.test(url.trim())) {
+      newErrors.url = 'URL must start with http:// or https://';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape" && isOpen) {
-          onClose();
-        }
-      };
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, onClose]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        name: name.trim(),
+        url: url.trim(),
+        method,
+        interval,
+        timeout,
+      });
+      setName('');
+      setUrl('');
+      setMethod('GET');
+      setInterval('60s');
+      setTimeout('10s');
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    const validate = (): boolean => {
-      const newErrors: { name?: string; url?: string } = {};
-      if (!name.trim()) {
-        newErrors.name = "Name is required";
-      }
-      if (!url.trim()) {
-        newErrors.url = "URL is required";
-      }
-      setErrors(newErrors);
-      return Object.keys(newErrors).length === 0;
-    };
+  if (!isOpen) return null;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!validate()) return;
-
-      setIsSubmitting(true);
-      try {
-        await onSubmit({
-          name: name.trim(),
-          url: url.trim(),
-          method,
-          interval,
-          timeout,
-        });
-        setIsSuccess(true);
-        setTimeout(() => {
-          setName("");
-          setUrl("");
-          setMethod("GET");
-          setInterval("60s");
-          setTimeout("10s");
-          setIsSuccess(false);
-          onClose();
-        }, 1500);
-      } catch (error) {
-        console.error("Failed to create endpoint:", error);
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-
-    const handleBackdropClick = (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) {
-        onClose();
-      }
-    };
-
-    return (
-      <AnimatePresence>
-        {isOpen && (
-          <MotionDiv
-            ref={ref}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={handleBackdropClick}
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-[#111] border border-white/[0.09] rounded-xl shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+              <Globe size={14} className="text-red-400" />
+            </div>
+            <h2 className="text-sm font-semibold text-zinc-100">Add Endpoint</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors"
           >
-            <MotionDiv
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-full max-w-md bg-[#111] border border-white/[0.09] rounded-xl shadow-2xl overflow-hidden"
-              role="dialog"
-              aria-labelledby="modal-title"
-              aria-modal="true"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                    <Globe size={13} className="text-red-400" />
-                  </div>
-                  <h2
-                    id="modal-title"
-                    className="text-sm font-semibold text-zinc-100"
-                  >
-                    Create endpoint
-                  </h2>
-                </div>
-                <button
-                  aria-label="Close modal"
-                  className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                >
-                  <X size={15} />
-                </button>
-              </div>
+            <X size={15} />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="px-5 py-5 flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-zinc-400">Endpoint name</label>
+            <input
+              type="text"
+              placeholder="User Service"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+              className={cn(
+                'h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border transition-colors duration-150 placeholder:text-zinc-600 focus:outline-none',
+                errors.name
+                  ? 'border-red-500/50 focus:border-red-500/60 focus:ring-1 focus:ring-red-500/20'
+                  : 'border-white/[0.08] focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15'
+              )}
+            />
+            {errors.name && (
+              <p className="text-[11px] text-red-400 flex items-center gap-1 mt-1">
+                <AlertCircle size={11} />
+                {errors.name}
+              </p>
+            )}
+          </div>
 
-              {/* Form */}
-              <form
-                className="px-5 py-5 flex flex-col gap-4"
-                onSubmit={handleSubmit}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-zinc-400">URL</label>
+            <input
+              type="text"
+              placeholder="https://api.example.com/users"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (errors.url) setErrors((prev) => ({ ...prev, url: undefined }));
+              }}
+              className={cn(
+                'h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border transition-colors duration-150 placeholder:text-zinc-600 focus:outline-none font-mono',
+                errors.url
+                  ? 'border-red-500/50 focus:border-red-500/60 focus:ring-1 focus:ring-red-500/20'
+                  : 'border-white/[0.08] focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15'
+              )}
+            />
+            {errors.url && (
+              <p className="text-[11px] text-red-400 flex items-center gap-1 mt-1">
+                <AlertCircle size={11} />
+                {errors.url}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-400">Method</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value as EndpointFormData['method'])}
+                className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15 transition-colors appearance-none"
               >
-                {/* Name Field */}
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="endpoint-name"
-                    className="text-xs font-medium text-zinc-400"
-                  >
-                    Name
-                  </label>
-                  <input
-                    ref={nameInputRef}
-                    id="endpoint-name"
-                    type="text"
-                    placeholder="Production API"
-                    value={name}
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      if (errors.name) setErrors({ ...errors, name: undefined });
-                    }}
-                    className={cn(
-                      "h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border transition-colors duration-150 placeholder:text-zinc-600 focus:outline-none focus:ring-1",
-                      errors.name
-                        ? "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/15"
-                        : "border-white/[0.08] focus:border-red-500/50 focus:ring-red-500/15"
-                    )}
-                  />
-                  {errors.name && (
-                    <span className="text-xs text-red-400">{errors.name}</span>
-                  )}
-                </div>
+                {HTTP_METHODS.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
 
-                {/* URL Field */}
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="endpoint-url"
-                    className="text-xs font-medium text-zinc-400"
-                  >
-                    URL
-                  </label>
-                  <div className="relative">
-                    <Link2
-                      size={13}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-                    />
-                    <input
-                      id="endpoint-url"
-                      type="text"
-                      placeholder="https://api.example.com/health"
-                      value={url}
-                      onChange={(e) => {
-                        setUrl(e.target.value);
-                        if (errors.url) setErrors({ ...errors, url: undefined });
-                      }}
-                      className={cn(
-                        "w-full h-9 pl-9 pr-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border transition-colors duration-150 placeholder:text-zinc-600 focus:outline-none focus:ring-1",
-                        errors.url
-                          ? "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/15"
-                          : "border-white/[0.08] focus:border-red-500/50 focus:ring-red-500/15"
-                      )}
-                    />
-                  </div>
-                  {errors.url && (
-                    <span className="text-xs text-red-400">{errors.url}</span>
-                  )}
-                </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-400">Interval</label>
+              <select
+                value={interval}
+                onChange={(e) => setInterval(e.target.value as EndpointFormData['interval'])}
+                className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15 transition-colors appearance-none"
+              >
+                {INTERVALS.map((i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
+            </div>
 
-                {/* Method & Interval Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor="endpoint-method"
-                      className="text-xs font-medium text-zinc-400"
-                    >
-                      Method
-                    </label>
-                    <select
-                      id="endpoint-method"
-                      value={method}
-                      onChange={(e) =>
-                        setMethod(e.target.value as EndpointFormData["method"])
-                      }
-                      className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/50 focus:ring-red-500/15 transition-colors"
-                    >
-                      <option value="GET">GET</option>
-                      <option value="POST">POST</option>
-                      <option value="PUT">PUT</option>
-                      <option value="DELETE">DELETE</option>
-                      <option value="PATCH">PATCH</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor="endpoint-interval"
-                      className="text-xs font-medium text-zinc-400"
-                    >
-                      Interval
-                    </label>
-                    <select
-                      id="endpoint-interval"
-                      value={interval}
-                      onChange={(e) =>
-                        setInterval(e.target.value as EndpointFormData["interval"])
-                      }
-                      className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/50 focus:ring-red-500/15 transition-colors"
-                    >
-                      <option value="30s">30s</option>
-                      <option value="60s">60s</option>
-                      <option value="5m">5m</option>
-                      <option value="15m">15m</option>
-                    </select>
-                  </div>
-                </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-400">Timeout</label>
+              <select
+                value={timeout}
+                onChange={(e) => setTimeout(e.target.value as EndpointFormData['timeout'])}
+                className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15 transition-colors appearance-none"
+              >
+                {TIMEOUTS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-                {/* Timeout */}
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="endpoint-timeout"
-                    className="text-xs font-medium text-zinc-400"
-                  >
-                    Timeout
-                  </label>
-                  <select
-                    id="endpoint-timeout"
-                    value={timeout}
-                    onChange={(e) =>
-                      setTimeout(e.target.value as EndpointFormData["timeout"])
-                    }
-                    className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#0a0a0a] border border-white/[0.08] focus:outline-none focus:border-red-500/50 focus:ring-red-500/15 transition-colors"
-                  >
-                    <option value="5s">5s</option>
-                    <option value="10s">10s</option>
-                    <option value="30s">30s</option>
-                  </select>
-                </div>
-
-                {/* Success Message */}
-                {isSuccess && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-green-500/10 border border-green-500/20">
-                    <div className="w-2 h-2 rounded-full bg-green-400" />
-                    <span className="text-xs text-green-400">
-                      Endpoint created successfully
-                    </span>
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting || isSuccess}
-                  className="h-9 mt-1 rounded-md bg-red-500 hover:bg-red-400 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-colors"
-                >
-                  {isSubmitting ? "Creating..." : isSuccess ? "Created!" : "Create endpoint"}
-                </button>
-              </form>
-            </MotionDiv>
-          </MotionDiv>
-        )}
-      </AnimatePresence>
-    );
-  }
-);
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="h-8 px-4 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-8 px-4 rounded-md bg-red-500 hover:bg-red-400 text-white text-xs font-medium transition-colors shadow-[0_0_12px_rgba(239,68,68,0.2)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create endpoint'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
