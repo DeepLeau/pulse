@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { statusColors, type EndpointFormData, useEndpointsStore, filterEndpoints, type Endpoint } from '@/lib/data';
+import { statusColors, type EndpointFormData, filterEndpoints, type Endpoint } from '@/lib/data';
+import { useEndpointsStore } from '@/hooks/useEndpointsStore';
 import { cn } from '@/lib/utils';
 import { Globe, Search, Filter, Plus, ArrowUpRight, MoreHorizontal, Trash2, Edit, RefreshCw } from 'lucide-react';
 import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
