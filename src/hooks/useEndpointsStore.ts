@@ -37,5 +37,25 @@ export function useEndpointsStore() {
     return newEndpoint;
   }, []);
 
-  return { endpoints, addEndpoint };
+  const deleteEndpoint = useCallback((id: string): void => {
+    setEndpoints((prev) => prev.filter((endpoint) => endpoint.id !== id));
+  }, []);
+
+  const updateEndpoint = useCallback((id: string, data: EndpointFormData): void => {
+    setEndpoints((prev) =>
+      prev.map((endpoint) =>
+        endpoint.id === id
+          ? {
+              ...endpoint,
+              name: data.name,
+              url: data.url.replace(/^https?:\/\//, ''),
+              latency: Math.floor(Math.random() * 100) + 20,
+              lastCheck: 'Just now',
+            }
+          : endpoint
+      )
+    );
+  }, []);
+
+  return { endpoints, addEndpoint, deleteEndpoint, updateEndpoint };
 }

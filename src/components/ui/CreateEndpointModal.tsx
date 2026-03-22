@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { X, Globe, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { EndpointFormData } from '@/lib/data';
 
@@ -9,13 +9,21 @@ interface CreateEndpointModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: EndpointFormData) => Promise<void>;
+  editMode?: boolean;
+  initialData?: Partial<EndpointFormData>;
 }
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const;
 const INTERVALS = ['30s', '60s', '5m', '15m'] as const;
 const TIMEOUTS = ['5s', '10s', '30s'] as const;
 
-export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpointModalProps) {
+export function CreateEndpointModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  editMode = false,
+  initialData,
+}: CreateEndpointModalProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState<EndpointFormData['method']>('GET');
@@ -24,28 +32,45 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; url?: string }>({});
 
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setName(initialData.name ?? '');
+      setUrl(initialData.url ? `https://${initialData.url}` : '');
+      setMethod(initialData.method ?? 'GET');
+      setInterval(initialData.interval ?? '60s');
+      setTimeout(initialData.timeout ?? '10s');
+    } else if (isOpen) {
+      setName('');
+      setUrl('');
+      setMethod('GET');
+      setInterval('60s');
+      setTimeout('10s');
+    }
+    setErrors({});
+  }, [isOpen, initialData]);
+
   const validateForm = (): boolean => {
     const newErrors: { name?: string; url?: string } = {};
-    
+
     if (!name.trim()) {
       newErrors.name = 'Name is required';
     }
-    
+
     if (!url.trim()) {
       newErrors.url = 'URL is required';
     } else if (!/^https?:\/\//.test(url.trim())) {
       newErrors.url = 'URL must start with http:// or https://';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsSubmitting(true);
     try {
       await onSubmit({
@@ -55,11 +80,6 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
         interval,
         timeout,
       });
-      setName('');
-      setUrl('');
-      setMethod('GET');
-      setInterval('60s');
-      setTimeout('10s');
       onClose();
     } catch {
       // Error handled by parent
@@ -78,7 +98,9 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
             <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
               <Globe size={14} className="text-red-400" />
             </div>
-            <h2 className="text-sm font-semibold text-zinc-100">Add Endpoint</h2>
+            <h2 className="text-sm font-semibold text-zinc-100">
+              {editMode ? 'Edit Endpoint' : 'Add Endpoint'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -87,7 +109,7 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
             <X size={15} />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="px-5 py-5 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-zinc-400">Endpoint name</label>
@@ -141,8 +163,9 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
 
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-400">Method</label>
+              <label htmlFor="method-select" className="text-xs font-medium text-zinc-400">Method</label>
               <select
+                id="method-select"
                 value={method}
                 onChange={(e) => setMethod(e.target.value as EndpointFormData['method'])}
                 className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15 transition-colors appearance-none"
@@ -154,8 +177,9 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-400">Interval</label>
+              <label htmlFor="interval-select" className="text-xs font-medium text-zinc-400">Interval</label>
               <select
+                id="interval-select"
                 value={interval}
                 onChange={(e) => setInterval(e.target.value as EndpointFormData['interval'])}
                 className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15 transition-colors appearance-none"
@@ -167,8 +191,9 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-400">Timeout</label>
+              <label htmlFor="timeout-select" className="text-xs font-medium text-zinc-400">Timeout</label>
               <select
+                id="timeout-select"
                 value={timeout}
                 onChange={(e) => setTimeout(e.target.value as EndpointFormData['timeout'])}
                 className="h-9 px-3 rounded-md text-sm text-zinc-100 bg-[#1a1a1a] border border-white/[0.08] focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/15 transition-colors appearance-none"
@@ -196,11 +221,11 @@ export function CreateEndpointModal({ isOpen, onClose, onSubmit }: CreateEndpoin
             >
               {isSubmitting ? (
                 <>
-                  <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                  Creating...
+                  <Loader2 size={13} className="animate-spin" />
+                  {editMode ? 'Saving...' : 'Creating...'}
                 </>
               ) : (
-                'Create endpoint'
+                editMode ? 'Save changes' : 'Create endpoint'
               )}
             </button>
           </div>

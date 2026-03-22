@@ -4,13 +4,83 @@ import { useState, useMemo } from 'react';
 import { statusColors, type EndpointFormData, filterEndpoints, type Endpoint } from '@/lib/data';
 import { useEndpointsStore } from '@/hooks/useEndpointsStore';
 import { cn } from '@/lib/utils';
-import { Globe, Search, Filter, Plus, ArrowUpRight, MoreHorizontal, Trash2, Edit, RefreshCw } from 'lucide-react';
+import { Globe, Search, Filter, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CreateEndpointModal } from '@/components/ui/CreateEndpointModal';
+import { EndpointRowMenu } from '@/components/ui/EndpointRowMenu';
 
-function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
-  const colors = statusColors[endpoint.status];
+const ITEMS_PER_PAGE = 8;
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+
   return (
-    <tr className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer">
+    <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
+      <p className="text-xs text-zinc-500">
+        Page {currentPage} of {totalPages}
+      </p>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="w-7 h-7 flex items-center justify-center rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Previous page"
+        >
+          <ChevronLeft size={14} />
+        </button>
+
+        {pageNumbers.map((page) => (
+          <button
+            key={page}
+            onClick={() => onPageChange(page)}
+            className={cn(
+              'w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium transition-colors',
+              page === currentPage
+                ? 'bg-red-500/10 border border-red-500/30 text-red-400'
+                : 'border border-white/10 bg-white/[0.03] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]'
+            )}
+            aria-label={`Page ${page}`}
+            aria-current={page === currentPage ? 'page' : undefined}
+          >
+            {page}
+          </button>
+        ))}
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="w-7 h-7 flex items-center justify-center rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label="Next page"
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EndpointRow({
+  endpoint,
+  onEdit,
+  onDelete,
+}: {
+  endpoint: Endpoint;
+  onEdit: (endpoint: Endpoint) => void;
+  onDelete: (endpoint: Endpoint) => void;
+}) {
+  const colors = statusColors[endpoint.status];
+
+  return (
+    <tr className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors">
       <td className="px-4 py-4">
         <div className="flex items-center gap-3">
           <div className={cn('w-2 h-2 rounded-full', colors.dot, endpoint.status === 'down' && 'animate-pulse')} />
@@ -31,9 +101,9 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
             {endpoint.latency > 0 ? `${endpoint.latency}ms` : '-'}
           </span>
           <div className="w-12 h-1 rounded-full bg-white/[0.06] overflow-hidden">
-            <div 
-              className={cn('h-full rounded-full', endpoint.latency > 300 ? 'bg-yellow-400' : endpoint.latency === 0 ? 'bg-red-400' : 'bg-green-400')} 
-              style={{ width: `${Math.min(100, (endpoint.latency / 500) * 100)}%` }} 
+            <div
+              className={cn('h-full rounded-full', endpoint.latency > 300 ? 'bg-yellow-400' : endpoint.latency === 0 ? 'bg-red-400' : 'bg-green-400')}
+              style={{ width: `${Math.min(100, (endpoint.latency / 500) * 100)}%` }}
             />
           </div>
         </div>
@@ -45,9 +115,7 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
         <span className="text-xs text-zinc-600">{endpoint.lastCheck}</span>
       </td>
       <td className="px-4 py-4 text-right">
-        <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/[0.06] text-zinc-600 hover:text-zinc-300 transition-colors">
-          <MoreHorizontal size={14} />
-        </button>
+        <EndpointRowMenu endpoint={endpoint} onEdit={onEdit} onDelete={onDelete} />
       </td>
     </tr>
   );
@@ -76,15 +144,67 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
   );
 }
 
+function DeleteConfirmModal({
+  isOpen,
+  endpointName,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  endpointName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm bg-[#111] border border-white/[0.09] rounded-xl shadow-2xl">
+        <div className="px-5 py-5">
+          <h3 className="text-sm font-semibold text-zinc-100 mb-2">Delete endpoint?</h3>
+          <p className="text-sm text-zinc-400">
+            Are you sure you want to delete <span className="text-zinc-200 font-medium">{endpointName}</span>? This action cannot be undone.
+          </p>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/[0.06]">
+          <button
+            onClick={onCancel}
+            className="h-8 px-4 rounded-md border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 text-xs font-medium transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="h-8 px-4 rounded-md bg-red-500 hover:bg-red-400 text-white text-xs font-medium transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EndpointsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingEndpoint, setEditingEndpoint] = useState<Endpoint | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Endpoint | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const { endpoints, addEndpoint } = useEndpointsStore();
+  const [currentPage, setCurrentPage] = useState(1);
+  const { endpoints, addEndpoint, deleteEndpoint, updateEndpoint } = useEndpointsStore();
 
   const filteredEndpoints = useMemo(
     () => filterEndpoints(searchQuery, endpoints),
     [searchQuery, endpoints]
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredEndpoints.length / ITEMS_PER_PAGE));
+
+  const paginatedEndpoints = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredEndpoints.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredEndpoints, currentPage]);
 
   const healthyCount = endpoints.filter(e => e.status === 'healthy').length;
   const degradedCount = endpoints.filter(e => e.status === 'degraded').length;
@@ -92,7 +212,42 @@ export default function EndpointsPage() {
 
   const handleCreateEndpoint = async (data: EndpointFormData) => {
     await new Promise((resolve) => setTimeout(resolve, 800));
-    addEndpoint(data);
+    if (editMode && editingEndpoint) {
+      updateEndpoint(editingEndpoint.id, data);
+    } else {
+      addEndpoint(data);
+    }
+  };
+
+  const handleEdit = (endpoint: Endpoint) => {
+    setEditingEndpoint(endpoint);
+    setEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (endpoint: Endpoint) => {
+    setDeleteTarget(endpoint);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      deleteEndpoint(deleteTarget.id);
+      setDeleteTarget(null);
+      if (currentPage > totalPages) {
+        setCurrentPage(Math.max(1, totalPages));
+      }
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditMode(false);
+    setEditingEndpoint(null);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   return (
@@ -107,7 +262,7 @@ export default function EndpointsPage() {
             <RefreshCw size={13} />
             Refresh
           </button>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="h-7 px-3 rounded-md bg-red-500 hover:bg-red-400 text-white text-xs font-medium transition-colors shadow-[0_0_12px_rgba(239,68,68,0.3)] flex items-center gap-1.5"
           >
@@ -118,14 +273,13 @@ export default function EndpointsPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-        {/* Search */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input 
+            <input
               placeholder="Search endpoints by name or URL..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full h-8 pl-9 pr-3 rounded-md bg-[#111] border border-white/[0.08] text-xs text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-red-500/40 transition-colors"
             />
           </div>
@@ -135,7 +289,6 @@ export default function EndpointsPage() {
           </button>
         </div>
 
-        {/* Status Summary */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
             <div className="w-2 h-2 rounded-full bg-green-400" />
@@ -151,7 +304,6 @@ export default function EndpointsPage() {
           </div>
         </div>
 
-        {/* Endpoints Table or Empty State */}
         {filteredEndpoints.length === 0 ? (
           <div className="bg-[#111] border border-white/[0.07] rounded-lg overflow-hidden">
             <EmptyState hasSearch={searchQuery.length > 0} />
@@ -172,21 +324,46 @@ export default function EndpointsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEndpoints.map((endpoint) => (
-                    <EndpointRow key={endpoint.id} endpoint={endpoint} />
+                  {paginatedEndpoints.map((endpoint) => (
+                    <EndpointRow
+                      key={endpoint.id}
+                      endpoint={endpoint}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </tbody>
               </table>
             </div>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>
 
-      {/* Create Endpoint Modal */}
       <CreateEndpointModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onSubmit={handleCreateEndpoint}
+        editMode={editMode}
+        initialData={
+          editingEndpoint
+            ? {
+                name: editingEndpoint.name,
+                url: editingEndpoint.url,
+              }
+            : undefined
+        }
+      />
+
+      <DeleteConfirmModal
+        isOpen={deleteTarget !== null}
+        endpointName={deleteTarget?.name ?? ''}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </>
   );
